@@ -12,7 +12,7 @@ The **DataTransformationRxWorkers** application is a high-performance, asynchron
 * **Flexible Metadata-Driven Scheduling:** Worker execution windows are declared dynamically within `application.yaml` without recompilation.
 * **Crisis Bypassing Mode (`xn` parameter):** Overrides internal scheduling filters at startup to trigger immediate execution of all active pipelines.
 * **Pluggable Multi-Schema Authentication:** Unified security layer resolved dynamically from external configuration profiles supporting `none`, `basic`, `token`, and dynamic `oauth2` flows.
-* **Fault-Tolerant JSON Deserialization:** Features robust data-cleansing strategies inside `ACN_DataDeserializer` and `F12_DataDeserializer_v3`. Incoming string tokens are dynamically sanitized by normalizing locale-specific number formats (replacing fractional commas with dots) and defensively falling back to default values (`0.0`) on parsing exceptions to maximize integration uptime.
+* **Fault-Tolerant JSON Deserialization:** Features robust data-cleansing strategies powered by a centralized **`NumericParser`** utility inside the shared infrastructure. Incoming string tokens within `ACN_DataDeserializer` and `M12_DataDeserializer_v3` are dynamically sanitized by normalizing locale-specific number formats (replacing fractional commas with dots, truncating accidental floating points for integers) and defensively falling back to standard default values (`0` or `0.0`) on parsing exceptions to maximize integration uptime.
 * **Dependency Injection Architecture:** Powered by **Google Guice 7**, promoting loose coupling across network, serialization, and persistence layers.
 * **Dynamic Entity Integration & Mapping:** Decoupled shared-database design using a metadata index file (`entities.yaml`) and reflection-based domain model binding.
 * **Resilient Network Infrastructure:** Optimized **Apache HttpClient 5** backed by a thread-safe connection pool with a 700-second timeout ceiling.
@@ -152,6 +152,8 @@ Acts as an isolated, reusable framework layer holding foundational utilities, da
   Domain-wide DTO defining the standardized output format for pipeline auditing.
 * **`repository/StagingBatchRepository.java`**
   High-performance generic DAO executing memory-efficient transaction batching.
+* **`utils/NumericParser.java`**
+  Centralized, fault-tolerant numeric utility providing defensive parsing for primitive integers and doubles.
 * **`utils/ExecutionResultWriter.java`**
   Thread-safe atomic file writer that updates and merges metrics into result.yaml.
 
