@@ -248,9 +248,10 @@ workers:
 
   ## 🛠 Prerequisites
 
-* **Java:** JDK 17 or higher
+* **Java:** JDK 17 (Minimum baseline requirement due to advanced pattern matching, arrow switch expressions, and Jakarta Persistence namespaces)
 * **Databases:** MS SQL Server (Staging layer) & Oracle Database (Source gateway)
 * **Build System:** Apache Maven 3.8+
+
 
 ## 💻 Deployment & Running
 
