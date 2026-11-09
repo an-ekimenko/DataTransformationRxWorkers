@@ -16,6 +16,7 @@ import acn.model.ACN_Data;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import static by.beloil.shared.utils.NumericParser.parseSafeDouble;
 
 /**
  * Custom Jackson deserializer responsible for parsing and transforming raw JSON payloads 
@@ -85,8 +86,10 @@ public class ACN_DataDeserializer extends StdDeserializer<ACN_Data> {
 					ACN record = new ACN();
 					
 					record.setMemberCode(element.get("memberCode").asInt());
-					record.setActiveClients_Month(element.has("activeClients_Month") ? element.get("activeClients_Month").asDouble() : 0.0);
-					record.setActiveClients_Year(element.has("activeClients_Year") ? element.get("activeClients_Year").asDouble() : 0.0);
+
+					record.setActiveClients_Month(element.has("activeClients_Month") ? parseSafeDouble(element.get("activeClients_Month").asText()) : 0.0);
+					record.setActiveClients_Year(element.has("activeClients_Year") ? parseSafeDouble(element.get("activeClients_Year").asText()) : 0.0);
+
 					
 					acnList.add(record);
 				}
@@ -100,4 +103,6 @@ public class ACN_DataDeserializer extends StdDeserializer<ACN_Data> {
 
 		return acnData;
 	}
+	
+
 }

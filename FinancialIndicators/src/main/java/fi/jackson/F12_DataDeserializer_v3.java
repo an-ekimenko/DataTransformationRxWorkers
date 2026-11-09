@@ -18,6 +18,7 @@ import fi.model.F12ItemFromApi_v3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import static by.beloil.shared.utils.NumericParser.parseSafeDouble;
 
 /**
  * Custom Jackson deserializer responsible for parsing and translating raw JSON array structures 
@@ -93,7 +94,7 @@ public class F12_DataDeserializer_v3 extends StdDeserializer<F12DataFromApi_v3> 
                     	switch (fieldName) {
                     		case "Code" -> Code = item.get(fieldName).asText();  
                     		case "Value" -> { 
-                    				Value = Double.parseDouble(item.get(fieldName).asText()); 
+                    				Value = parseSafeDouble(item.get(fieldName).asText());
                     				switch (Code.trim()) {
                             			case "001" -> { 
                             				if (Value > 0) {
@@ -126,4 +127,6 @@ public class F12_DataDeserializer_v3 extends StdDeserializer<F12DataFromApi_v3> 
         logger.info("Financial json mapping finalized: successfully parsed and computed metrics for {} issuer entries.", f12_data.size());
         return new F12DataFromApi_v3(f12_data);
 	}
+	
+	
 }
