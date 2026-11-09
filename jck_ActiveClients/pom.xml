@@ -1,0 +1,106 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <parent>
+    <groupId>by.beloil.workers</groupId>
+    <artifactId>DataTransformationRxWorkers</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  
+  <artifactId>jck_ActiveClients</artifactId>
+  <name>jck_ActiveClients</name>
+  
+  <dependencies>
+    <!-- =================================================================== -->
+    <!-- Internal Modules & Proprietary Libraries                             -->
+    <!-- =================================================================== -->
+    <!-- Shared enterprise master configurations and model mappings -->
+    <dependency>
+        <groupId>by.beloil.workers</groupId>
+        <artifactId>shared-module</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <!-- Automated runtime TLS/SSL certificate verification utility -->
+    <dependency>
+        <groupId>by.beloil.crypto</groupId>
+        <artifactId>crypto-cert-loader</artifactId>
+    </dependency>
+
+    <!-- =================================================================== -->
+    <!-- HTTP Transport & OAuth2 Security Subsystems                         -->
+    <!-- =================================================================== -->
+    <!-- High-performance Apache HTTP Client engine for network pipelines -->
+    <dependency>
+        <groupId>org.apache.httpcomponents.client5</groupId>
+        <artifactId>httpclient5</artifactId>
+    </dependency>
+    <!-- Apache Oltu client library handling OAuth2 Client Credentials workflow -->
+    <dependency>
+        <groupId>org.apache.oltu.oauth2</groupId>
+        <artifactId>org.apache.oltu.oauth2.client</artifactId>
+    </dependency>
+
+    <!-- =================================================================== -->
+    <!-- JSON Serialization Suite (Jackson)                                  -->
+    <!-- =================================================================== -->
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+    </dependency>
+
+    <!-- =================================================================== -->
+    <!-- Core Enterprise Frameworks & Infrastructure                         -->
+    <!-- =================================================================== -->
+    <!-- Google Guice engine managing dependency injection containers -->
+    <dependency>
+        <groupId>com.google.inject</groupId>
+        <artifactId>guice</artifactId>
+    </dependency>
+    <!-- Hibernate ORM core framework for relational mapping persistence -->
+    <dependency>
+        <groupId>org.hibernate.orm</groupId>
+        <artifactId>hibernate-core</artifactId>
+    </dependency>
+
+    <!-- =================================================================== -->
+    <!-- Logging & Development Utilities                                     -->
+    <!-- =================================================================== -->
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-api</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+    </dependency>
+    <!-- Compile-time boilerplate abstraction code generator -->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- Oracle JDBC Driver (JDK 11/17 compatible) -->
+    <dependency>
+    	<groupId>com.oracle.database.jdbc</groupId>
+    	<artifactId>ojdbc10</artifactId>
+    </dependency>
+
+	<!-- Oracle Internationalization and NLS support -->
+	<dependency>
+   		<groupId>com.oracle.ojdbc</groupId>
+   		<artifactId>orai18n</artifactId>
+	</dependency>
+
+    
+  </dependencies>
+
+</project>

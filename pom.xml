@@ -1,0 +1,162 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>by.beloil.workers</groupId>
+  <artifactId>DataTransformationRxWorkers</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>DataTransformationRxWorkers</name>
+
+  <modules>
+  	<module>AppLauncher</module>
+  	<module>shared-module</module>
+  	<module>jck_ActiveClients</module>
+  	<module>FinancialIndicators</module>
+  </modules>
+  
+  <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <lib.dir>dependencies</lib.dir>
+        
+        <!-- Globalized single version locks -->
+        <rxjava.version>3.1.8</rxjava.version>
+        <jackson.version>2.21.0</jackson.version>
+        <guice.version>7.0.0</guice.version>
+        <log4j.version>2.20.0</log4j.version>
+        <hibernate.version>6.4.4.Final</hibernate.version>
+        <lombok.version>1.18.42</lombok.version>
+        <httpclient.version>5.2.1</httpclient.version>
+		<p6spy.version>3.9.1</p6spy.version>
+        <mssql.version>12.4.2.jre11</mssql.version>
+        <oracle.version>19.29.0.0</oracle.version>
+        <orai18n.version>19.3.0.0</orai18n.version>
+        <oauth2.version>1.0.2</oauth2.version>
+    </properties>
+
+        <dependencyManagement>
+        <dependencies>
+            <!-- Centralized Jackson Bill of Materials (BOM) Platform -->
+            <!-- Automatically coordinates internal version mismatches (e.g., 2.21.0 vs 2.21) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- =================================================================== -->
+            <!-- Custom Corporate Cryptographic Dependencies                         -->
+            <!-- =================================================================== -->
+            <dependency>
+                <groupId>by.beloil.crypto</groupId>
+                <artifactId>crypto-cert-loader</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+
+            <!-- Remaining Framework Locks (Guice, RxJava, Hibernate) stay here unchanged -->
+            <dependency>
+                <groupId>io.reactivex.rxjava3</groupId>
+                <artifactId>rxjava</artifactId>
+                <version>${rxjava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.inject</groupId>
+                <artifactId>guice</artifactId>
+                <version>${guice.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${log4j.version}</version>
+            </dependency>
+            <!-- Bridge: Routes SLF4J v2.x logs directly into Log4j2 -->
+			<dependency>
+    			<groupId>org.apache.logging.log4j</groupId>
+    			<artifactId>log4j-slf4j2-impl</artifactId>
+    			<version>${log4j.version}</version> 
+			</dependency>
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+            <!-- Dynamic Development Tool (Lombok) -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            
+            <dependency>
+            	<groupId>org.apache.httpcomponents.client5</groupId>
+            	<artifactId>httpclient5</artifactId>
+            	<version>${httpclient.version}</version>
+        	</dependency>
+        	
+        	<dependency>
+	    		<groupId>org.apache.oltu.oauth2</groupId>
+	    		<artifactId>org.apache.oltu.oauth2.client</artifactId>
+    			<version>${oauth2.version}</version>
+			</dependency>
+        	
+			
+			<dependency>
+				<groupId>p6spy</groupId>
+				<artifactId>p6spy</artifactId>
+				<version>${p6spy.version}</version>
+			</dependency>
+
+            <!-- Microsoft SQL Server Native JDBC Driver mapping -->
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>${mssql.version}</version>
+            </dependency>
+
+            <!-- Oracle JDBC Driver (JDK 11/17 compatible) -->
+    		<dependency>
+        		<groupId>com.oracle.database.jdbc</groupId>
+        		<artifactId>ojdbc10</artifactId>
+        		<version>${oracle.version}</version>
+        		<scope>compile</scope>
+    		</dependency>
+
+    		<!-- Oracle Internationalization and NLS support -->
+    		<dependency>
+        		<groupId>com.oracle.ojdbc</groupId>
+        		<artifactId>orai18n</artifactId>
+        		<version>${orai18n.version}</version>
+    		</dependency>
+
+
+        </dependencies>
+    </dependencyManagement>
+
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+  
+</project>

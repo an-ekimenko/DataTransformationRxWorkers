@@ -1,0 +1,87 @@
+# # ==============================================================================
+# Unified Deployment Profiles Template for Reactive Data Transformation Workers
+# IMPORTANT: Copy this file to 'application.yaml' and populate with real credentials.
+# ==============================================================================
+
+workers:
+
+  # ============================================================================
+  # 1. Active Clients Number Worker (Module: jck_ActiveClients)
+  # ============================================================================
+  acn_worker:
+    # Target endpoint URI used to request the final business data
+    data_endpoint: "https://your-corporate-gateway-domain/api/v1/active-clients"
+
+    # Main authentication strategy for the target data endpoint
+    # Options: "none", "basic", "token", "oauth2"
+    auth_type: "oauth2"
+
+    # --------------------------------------------------------------------------
+    # Credentials configuration depending on the selected 'auth_type'
+    # --------------------------------------------------------------------------
+    auth:
+      # Used only if auth_type: "basic"
+      basic:
+        username: "YOUR_ACN_SERVICE_USERNAME"
+        password: "YOUR_ACN_SERVICE_PASSWORD"
+
+      # Used only if auth_type: "token" (for pre-generated, static API keys)
+      static_token: ""
+
+      # Used only if auth_type: "oauth2" (Client Credentials Grant workflow)
+      # Worker will exchange these details for a dynamic token before fetching data
+      oauth2:
+        token_endpoint: "https://your-corporate-gateway-domain/identity/connect/token"
+        client_id: "YOUR_CLIENT_ID"
+        client_secret: "YOUR_CLIENT_SECRET"
+        scope: "rcp2.api.public"
+
+      
+    # Operational scheduler calendar configuration mapping
+    # Leaving 'days' empty triggers execution daily (Monday to Sunday)
+    days:
+    start_time: ["12:55:00"]
+    
+    # Fault-tolerance retry boundary constraints based on backoff mathematical rules
+    max_attempts: 3
+    initial_timeout_ms: 10000
+
+    # ============================================================================
+  # 2. Financial Indicators Worker (Module: FinancialIndicators)
+  # ============================================================================
+  fi_worker:
+    # Target base API endpoint URL used to pull form-12 balance metrics payloads
+    data_endpoint: "http://your-internal-api-domain:8088/api/forms/form-12"
+
+    # Main authentication strategy for the target data endpoint
+    # Options: "none", "basic", "token", "oauth2"
+    auth_type: "none"
+
+    # --------------------------------------------------------------------------
+    # Credentials configuration depending on the selected 'auth_type'
+    # --------------------------------------------------------------------------
+    auth:
+      # Used only if auth_type: "basic"
+      basic:
+        username: "YOUR_FI_SERVICE_USERNAME"
+        password: "YOUR_FI_SERVICE_PASSWORD"
+
+      # Used only if auth_type: "token" (for pre-generated, static API keys)
+      static_token: ""
+
+      # Used only if auth_type: "oauth2" (Client Credentials Grant workflow)
+      # Worker will exchange these details for a dynamic token before fetching data
+      oauth2:
+        token_endpoint: "https://your-corporate-gateway-domain/identity/connect/token"
+        client_id: "YOUR_CLIENT_ID"
+        client_secret: "YOUR_CLIENT_SECRET"
+        scope: "fi.api.public"
+
+      
+    # Operational scheduler calendar configuration mapping
+    days:
+    start_time: ["08:00:00", "20:00:00"]
+    
+    # Fault-tolerance retry boundary constraints based on backoff mathematical rules
+    max_attempts: 3
+    initial_timeout_ms: 10000

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =================================================================== -->
+<!-- MS SQL Staging Database Connection Template Profile                 -->
+<!-- IMPORTANT: Copy this file to 'Hibernate.cfg.xml' and fill in credentials. -->
+<!-- =================================================================== -->
+<hibernate-configuration>
+    <session-factory>
+        <!-- Database Connection Settings via P6Spy Proxy Driver -->
+        <property name="hibernate.connection.driver_class">com.p6spy.engine.spy.P6SpyDriver</property>
+        <property name="hibernate.connection.url">jdbc:p6spy:sqlserver://YOUR_TUNNEL_HOST:YOUR_PORT;databaseName=YOUR_DB_NAME;encrypt=true;trustServerCertificate=true;</property>
+        <property name="hibernate.connection.username">YOUR_DB_USER</property>
+        <property name="hibernate.connection.password">YOUR_DB_PASSWORD</property>
+
+        <!-- Database Dialect & Thread Context Binding -->
+        <property name="hibernate.dialect">org.hibernate.dialect.SQLServerDialect</property>
+        <property name="hibernate.current_session_context_class">thread</property>
+
+        <!-- Diagnostic & Raw Standard Output Logs Interception -->
+        <property name="show_sql">false</property>
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">false</property>
+
+        <!-- High-Performance Transaction Batch Processing Optimization -->
+        <property name="hibernate.jdbc.batch_size">50</property>
+        <property name="hibernate.order_inserts">true</property>
+        <property name="hibernate.order_updates">true</property>
+
+        <!-- Enterprise Annotated Domain Entity Persistent Persistence Store -->
+        <!-- Module 1: Active Clients Volume Telemetry Tracking -->
+        <mapping class="acn.model.ACN_Entity"/>
+
+        <!-- Module 2: Financial Indicators Form-12 Balancing Pipeline -->
+        <mapping class="fi.model.F12_Entity"/>
+        <mapping class="fi.model.F12t_Entity"/>
+    </session-factory>
+</hibernate-configuration>

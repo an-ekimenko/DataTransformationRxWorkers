@@ -1,0 +1,3 @@
+entities:
+  - "acn.model.ACN_Entity"
+  - "fi.model.F12_Entity"
