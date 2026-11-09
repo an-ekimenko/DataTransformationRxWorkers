@@ -282,10 +282,23 @@ By default, executing the packaged container runner deploys background interval 
 java -jar /path/to/AppLauncher.jar
 ```
 
-#### B. Immediate Emergency / Crisis Bypassing Mode
-To override the internal clock timers and trigger an immediate end-to-end synchronization run across all active workers (e.g., for ad-hoc manual jobs or external OS cron triggers), supply the **`xn`** parameter to the JVM execution footprint:
+#### B. Dynamic Log Directory Overriding
+You can dynamically override the absolute destination folder for all runtime traces (`commons.log` and `p6spy.log`) at startup by supplying the `-Dlog.dir` system property flag to the JVM configuration footprint:
+
+```bash
+java -Dlog.dir=/var/log/DataTransformationRxWorkers -jar /path/to/AppLauncher.jar
+```
+
+#### C. Immediate Emergency / Crisis Bypassing Mode
+To override the internal clock timers and force an immediate end-to-end synchronization run across all active workers (e.g., for ad-hoc manual execution, debugging, or external OS crontab triggers), supply the `xn` parameter as a program argument:
 
 ```bash
 java -jar /path/to/AppLauncher.jar xn
 ```
+
+*Note: You can seamlessly combine both flags to run an immediate ad-hoc sync while redirecting logs to a custom corporate mount point:*
+```bash
+java -Dlog.dir=/var/log/DataTransformationRxWorkers -jar /path/to/AppLauncher.jar xn
+```
+
 
