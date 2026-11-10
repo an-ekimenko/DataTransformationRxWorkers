@@ -8,14 +8,15 @@ The **DataTransformationRxWorkers** application is a high-performance, asynchron
 
 ## 🚀 Features
 
-* **RxJava 3 Reactive Architecture:** Driven by an asynchronous **RxJava 3** execution layer handling non-blocking interval loops and concurrent worker threads.
-* **Flexible Metadata-Driven Scheduling:** Worker execution windows are declared dynamically within `application.yaml` without recompilation.
-* **Crisis Bypassing Mode (`xn` parameter):** Overrides internal scheduling filters at startup to trigger immediate execution of all active pipelines.
-* **Pluggable Multi-Schema Authentication:** Unified security layer resolved dynamically from external configuration profiles supporting `none`, `basic`, `token`, and dynamic `oauth2` flows.
-* **Fault-Tolerant JSON Deserialization:** Features robust data-cleansing strategies powered by a centralized **`NumericParser`** utility inside the shared infrastructure. Incoming string tokens within `ACN_DataDeserializer` and `M12_DataDeserializer_v3` are dynamically sanitized by normalizing locale-specific number formats (replacing fractional commas with dots, truncating accidental floating points for integers) and defensively falling back to standard default values (`0` or `0.0`) on parsing exceptions to maximize integration uptime.
-* **Dependency Injection Architecture:** Powered by **Google Guice 7**, promoting loose coupling across network, serialization, and persistence layers.
-* **Dynamic Entity Integration & Mapping:** Decoupled shared-database design using a metadata index file (`entities.yaml`) and reflection-based domain model binding.
-* **Resilient Network Infrastructure:** Optimized **Apache HttpClient 5** backed by a thread-safe connection pool with a 700-second timeout ceiling.
+- **RxJava 3 Reactive Architecture:** High-performance execution on a thread-safe `Schedulers.io()` pool with atomic state monitors (`AtomicBoolean.compareAndSet`) to prevent task overlapping and race conditions.
+- **Flexible Metadata-Driven Scheduling:** Dynamic worker execution windows configured via `application.yaml` (using `days` and `start_time` matrices) with second-level matching precision through `java.time.Duration`.
+- **Resilient Single-Shot Crisis Mode (xn parameter):** Overrides polling intervals during emergency runs by detaching pipelines from recurring loops and executing isolated single-fire tasks using `Schedulers.io().scheduleDirect()`, managed safely via a `CountDownLatch`.
+- **Pluggable Multi-Schema Authentication:** Supports `none`, `basic`, static `token`, and dynamic `oauth2` Client Credentials Grant workflows.
+- **Fault-Tolerant JSON Deserialization:** Sanitizes incoming string tokens (`ACN_DataDeserializer` and `M12_DataDeserializer_v3`) via a centralized **NumericParser** utility, normalizing numbers and falling back safely on parse errors.
+- **Dependency Injection Architecture:** Built on **Google Guice 7** for loose coupling, test isolation, and resource safety.
+- **Dynamic Entity Integration & Mapping:** Uses an external metadata matrix manifest (`entities.yaml`) with reflective classloading (`Class.forName`) to register active entities into Hibernate during the IoC container boot stage.
+- **Resilient Network Infrastructure:** Features an **Apache HttpClient 5** architecture with a thread-safe pooled connection manager and a 700-second request timeout ceiling.
+
 
 
 ## 🏗 Directory Layout
