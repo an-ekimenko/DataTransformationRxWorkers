@@ -8,8 +8,8 @@ The **DataTransformationRxWorkers** application is a high-performance, asynchron
 
 ## 🚀 Features
 
-- **RxJava 3 Reactive Architecture:** High-performance execution on a thread-safe `Schedulers.io()` pool with atomic state monitors (`AtomicBoolean.compareAndSet`) to prevent task overlapping and race conditions.
-- **Flexible Metadata-Driven Scheduling:** Dynamic worker execution windows configured via `application.yaml` (using `days` and `start_time` matrices) with second-level matching precision through `java.time.Duration`.
+- **RxJava 3 Reactive Architecture:** High-performance execution on `Schedulers.io()` using atomic guards (`AtomicBoolean`) to prevent task overlapping and integrated `Resilience4j-style` exponential backoff retry mechanisms.
+- **Flexible Metadata-Driven Scheduling:** Dynamic worker scheduling via `application.yaml` with second-level precision, supported by an autonomous time-budget supervisor to limit total lifecycle duration.
 - **Resilient Single-Shot Crisis Mode (xn parameter):** Overrides polling intervals during emergency runs by detaching pipelines from recurring loops and executing isolated single-fire tasks using `Schedulers.io().scheduleDirect()`, managed safely via a `CountDownLatch`.
 - **Pluggable Multi-Schema Authentication:** Supports `none`, `basic`, static `token`, and dynamic `oauth2` Client Credentials Grant workflows.
 - **Fault-Tolerant JSON Deserialization:** Sanitizes incoming string tokens (`ACN_DataDeserializer` and `M12_DataDeserializer_v3`) via a centralized **NumericParser** utility, normalizing numbers and falling back safely on parse errors.
@@ -87,7 +87,7 @@ workers:
     start_time: ["12:55:00"]
     
     # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_attempts: 3
+    max_timeout_ms: 180000
     initial_timeout_ms: 10000
 
   # ============================================================================
@@ -126,7 +126,7 @@ workers:
     start_time: ["08:00:00", "20:00:00"]
     
     # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_attempts: 3
+    max_timeout_ms: 180000
     initial_timeout_ms: 10000
 ```
 
