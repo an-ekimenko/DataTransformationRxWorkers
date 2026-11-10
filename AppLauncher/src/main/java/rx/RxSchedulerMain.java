@@ -79,23 +79,27 @@ public class RxSchedulerMain {
             if (acnConfig != null) {
                 ACN_Worker acnWorker = injector.getInstance(ACN_Worker.class);
                 
-                disposables.add(Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
-                        .filter(tick -> shouldExecuteNow(acnConfig, "acn_worker"))
-                        .take(immediateExecution ? 1 : Long.MAX_VALUE) // In emergency mode, trigger only once and let the worker manage retries
-                        .subscribe(
-                                t -> {
-                                    try {
-                                        acnWorker.executeTask();
-                                    } finally {
-                                        if (immediateExecution) emergencyLatch.countDown();
-                                    }
-                                },
-                                err -> {
-                                    logger.error("Fatal exception inside automated ACN execution channel.", err);
-                                    if (immediateExecution) emergencyLatch.countDown();
-                                }
-                        ));
-                logger.info("Reactive scheduling profile successfully attached to ACN_Worker module loop.");
+                if (immediateExecution) {
+                    // Execute exactly once on a background thread without an infinite interval loop
+                    Schedulers.io().scheduleDirect(() -> {
+                        try {
+                            acnWorker.executeTask();
+                        } finally {
+                            emergencyLatch.countDown();
+                        }
+                    });
+                    logger.info("Emergency execution single-shot task attached to ACN_Worker.");
+                } else {
+                    // Standard recurring schedule mode
+                    disposables.add(Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
+                            .filter(tick -> !acnWorker.isRunning())
+                            .filter(tick -> shouldExecuteNow(acnConfig, "acn_worker"))
+                            .subscribe(
+                                    tick -> acnWorker.executeTask(),
+                                    err -> logger.error("Fatal exception inside automated ACN execution channel.", err)
+                            ));
+                    logger.info("Reactive scheduling profile successfully attached to ACN_Worker module loop.");
+                }
             }
 
             // ==========================================
@@ -105,24 +109,30 @@ public class RxSchedulerMain {
             if (fiConfig != null) {
                 FI_Worker fiWorker = injector.getInstance(FI_Worker.class);
                 
-                disposables.add(Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
-                        .filter(tick -> shouldExecuteNow(fiConfig, "fi_worker"))
-                        .take(immediateExecution ? 1 : Long.MAX_VALUE) // In emergency mode, trigger only once and let the worker manage retries
-                        .subscribe(
-                                t -> {
-                                    try {
-                                        fiWorker.executeTask();
-                                    } finally {
-                                        if (immediateExecution) emergencyLatch.countDown();
-                                    }
-                                },
-                                err -> {
-                                    logger.error("Fatal exception inside automated FI execution channel.", err);
-                                    if (immediateExecution) emergencyLatch.countDown();
-                                }
-                        ));
-                logger.info("Reactive scheduling profile successfully attached to FI_Worker module loop.");
+                if (immediateExecution) {
+                    // Execute exactly once on a background thread without an infinite interval loop
+                    Schedulers.io().scheduleDirect(() -> {
+                        try {
+                            fiWorker.executeTask();
+                        } finally {
+                            emergencyLatch.countDown();
+                        }
+                    });
+                    logger.info("Emergency execution single-shot task attached to FI_Worker.");
+                } else {
+                    // Standard recurring schedule mode
+                    disposables.add(Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
+                            .filter(tick -> !fiWorker.isRunning())
+                            .filter(tick -> shouldExecuteNow(fiConfig, "fi_worker"))
+                            .subscribe(
+                                    tick -> fiWorker.executeTask(),
+                                    err -> logger.error("Fatal exception inside automated FI execution channel.", err)
+                            ));
+                    logger.info("Reactive scheduling profile successfully attached to FI_Worker module loop.");
+                }
             }
+
+
 
             // Attach standard JVM shutdown hooks for resource disposal
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -154,15 +164,9 @@ public class RxSchedulerMain {
     }
 
     /**
-     * Determines whether a specific target worker node matches execution criteria.
-     * Instantly yields true if the environment execution is forced via immediate emergency argument parameters.
+     * Determines whether a specific target worker node matches execution criteria based on active schedule profiles.
      */
     private static boolean shouldExecuteNow(ApiConfig.WorkerConfig workerConfig, String workerName) {
-        if (immediateExecution) {
-            logger.warn("Forced emergency filter matched for component context: [{}]. Bypassing schedule.", workerName);
-            return true;
-        }
-
         LocalDateTime now = LocalDateTime.now();
         int currentDayOfWeek = now.getDayOfWeek().getValue();
         List<Integer> targetDays = workerConfig.getDays();
@@ -193,7 +197,8 @@ public class RxSchedulerMain {
             if (!logsDir.exists()) {
                 boolean created = logsDir.mkdirs();
                 if (created) {
-                    System.out.println("Infrastructure: Successfully created missing 'logs' directory in the project root.");
+                    // System.out.println replaced with logger.info to maintain codebase consistency
+                    LogManager.getLogger(RxSchedulerMain.class).info("Infrastructure: Successfully created missing 'logs' directory in the project root.");
                 }
             }
 
@@ -213,5 +218,4 @@ public class RxSchedulerMain {
             System.err.println("Critical pipeline diagnostic error: Logging architecture configuration crash - " + e.getMessage());
         }
     }
-
 }
