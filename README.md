@@ -157,6 +157,39 @@ Acts as an isolated, reusable framework layer holding foundational utilities, da
 * **`utils/ExecutionResultWriter.java`**
   Thread-safe atomic file writer that updates and merges metrics into result.yaml.
 
+### 📊 Metadata-Driven Entity Integration & Mapping
+
+To eliminate tight architectural coupling between independent business modules (`jck_ActiveClients`, `FinancialIndicators`) and the core data-access infrastructure, the engine employs a dynamic **Metadata-Driven Initialization** pattern. Instead of hardcoding static compiled class references inside Java code or maintaining fragile monolithic XML mapping declarations, the system exteriorizes database models inside a decoupled metadata manifest: `entities.yaml`.
+
+#### 1. Metadata Blueprint Manifest (`shared-module/src/main/resources/entities.yaml`)
+
+This index file hosts an ordered matrix of fully qualified class names (FQN) defining active JPA persistent domain models across the entire enterprise cluster.
+
+```yaml
+# ==============================================================================
+# Master Index of Active Persistent Entities Mapped across Project Modules
+# SharedInfraModule parses this manifest dynamically to build the SessionFactory.
+# ==============================================================================
+entities:
+  # Active Clients Number Staging Entity Classes (Module: jck_ActiveClients)
+  - "by.beloil.workers.model.acn.ACN_Entity"
+  
+  # Financial Indicators Enterprise KPI Entity Classes (Module: FinancialIndicators)
+  - "by.beloil.workers.model.fi.F12_Entity"
+  - "by.beloil.workers.model.fi.F12t_Entity"
+```
+
+#### 2. SessionFactory Bootstrap Customization Strategy (`SharedInfraModule.java`)
+
+During the foundational IoC container boot stage, the shared orchestration layer interceptor (`SharedInfraModule::provideMSSQLSessionFactory`) executes a pre-configuration handshake sequence:
+
+1. **Database Baseline Parsing:** It reads the native decoupled database connectivity properties out of the external `config/Hibernate.cfg.xml`.
+2. **Metadata Index Ingestion:** It loads the internal `entities.yaml` blueprint straight from the deployment assembly classpath stream using the Jackson YAML engine.
+3. **Reflection-Based Injection:** It loops through the extracted text entries, translates strings into runtime binary `Class<?>` signatures via reflective classloading (`Class.forName`), and dynamically appends them directly to the active Hibernate mapping registry.
+4. **Pool Sealing:** It registers the aggregated models context, initializes the thread-safe global `SessionFactory`, and binds it to the core generic transaction batching engine.
+
+This design guarantees absolute layer isolation—the foundational `shared-module` package has **zero static imports** or awareness of granular downstream worker entities. Introducing an entirely new data transformation worker requires only appending its compiled persistent model to the `entities.yaml` layout matrix, minimizing complex code regressions.
+
 ### 🔄 2. Core Orchestration Module (`AppLauncher`)
 The definitive entry point and bootstrapper of the entire application suite. Manages logging contexts, schedules background workers, and signals execution status to external job monitors.
 
