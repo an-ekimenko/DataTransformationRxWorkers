@@ -8,12 +8,11 @@ The **DataTransformationRxWorkers** application is a high-performance, asynchron
 
 ## 🚀 Features
 
-- **RxJava 3 Reactive Architecture:** High-performance asynchronous execution driven by an optimized `Schedulers.io()` pool. Leverages atomic execution guards (`AtomicBoolean.compareAndSet`) to guarantee rapid-fire protection and block concurrent thread overlapping. Includes an advanced **Resilient Exponential Random Backoff Retry Policy** modeled after the *Resilience4j* specification. Upon intercepted downstream pipeline failures, subsequent retry intervals are dynamically calculated using an exponential progression combined with a randomization factor (Jitter) to prevent thundering herd problems on destination endpoints:
+- **RxJava 3 Reactive Architecture:** High-performance asynchronous execution driven by an optimized `Schedulers.io()` pool. Leverages atomic execution guards (`AtomicBoolean.compareAndSet`) to guarantee rapid-fire protection, completely blocking concurrent thread overlapping or rapid ticks when the downstream database layers (MS SQL / Oracle) encounter exclusive transaction locks (`X-locks`). This architecture transforms the periodic push scheduler into a resilient, pull-isolated ingestion model that safeguards the external connection pool from exhaustion. Includes an advanced **Resilient Exponential Random Backoff Retry Policy** modeled after the *Resilience4j* specification. Upon intercepted downstream pipeline failures, subsequent retry intervals are dynamically calculated using an exponential progression combined with a randomization factor (Jitter) to prevent thundering herd problems on destination endpoints:
   * `Current Interval = initial_interval * (multiplier)^(attempt - 1)`
   * `Retry Delay = Current Interval ± (Current Interval * randomization_factor)`
   
   *Configuration Example:* Configured with an initial delay of `initial_timeout_ms`, a multiplier of `2.0`, and a `0.5` randomization factor (Jitter), the engine caps sequential intervals tightly below the maximum threshold while accumulating total spent time against the global `max_timeout_ms` budget.
-
 
 - **Flexible Metadata-Driven Scheduling:** Dynamic worker scheduling via `application.yaml` with second-level precision, supported by an autonomous time-budget supervisor to limit total lifecycle duration.
 - **Resilient Single-Shot Crisis Mode (xn parameter):** Overrides polling intervals during emergency runs by detaching pipelines from recurring loops and executing isolated single-fire tasks using `Schedulers.io().scheduleDirect()`, managed safely via a `CountDownLatch`.
