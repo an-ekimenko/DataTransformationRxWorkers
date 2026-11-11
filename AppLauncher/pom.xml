@@ -16,8 +16,11 @@
     <artifactId>AppLauncher</artifactId>
     <name>AppLauncher</name>
 
-    <dependencies>
-        <!-- Internal Sub-Module Coupling Inter-Dependencies -->
+        <dependencies>
+
+        <!-- =================================================================== -->
+        <!-- 1. Internal Project Sub-Modules                                     -->
+        <!-- =================================================================== -->
         <dependency>
             <groupId>by.beloil.workers</groupId>
             <artifactId>shared-module</artifactId>
@@ -34,15 +37,46 @@
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
 
-        <!-- Core Framework foundations -->
-        <dependency>
-            <groupId>io.reactivex.rxjava3</groupId>
-            <artifactId>rxjava</artifactId>
-        </dependency>
+        <!-- =================================================================== -->
+        <!-- 2. Core Architecture (Dependency Injection & Reactive Streams)      -->
+        <!-- =================================================================== -->
+        <!-- Lightweight dependency injection framework -->
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
         </dependency>
+
+        <!-- Reactive Extensions for the JVM -->
+        <dependency>
+            <groupId>io.reactivex.rxjava3</groupId>
+            <artifactId>rxjava</artifactId>
+        </dependency>
+
+        <!-- =================================================================== -->
+        <!-- 3. Database Access, Connection Pooling & SQL Monitoring             -->
+        <!-- =================================================================== -->
+        <!-- High-performance HikariCP connection pool integration for Hibernate -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-hikaricp</artifactId>
+        </dependency>
+
+        <!-- Native Microsoft SQL Server JDBC Driver (Runtime Class-Path) -->
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+        </dependency>
+
+        <!-- SQL query interceptor and logger -->
+        <dependency>
+            <groupId>p6spy</groupId>
+            <artifactId>p6spy</artifactId>
+        </dependency>
+
+        <!-- =================================================================== -->
+        <!-- 4. Logging Infrastructure                                           -->
+        <!-- =================================================================== -->
+        <!-- Log4j2 API and Core implementation -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -51,18 +85,9 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
         </dependency>
-        <dependency>
-            <groupId>p6spy</groupId>
-            <artifactId>p6spy</artifactId>
-        </dependency>
-        <!-- Native Microsoft SQL Server JDBC Driver Link for Runtime Class-Path -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-        </dependency>
-
 
     </dependencies>
+
 
     <build>
         <finalName>AppLauncher</finalName>

@@ -51,10 +51,10 @@
         </dependency>
         
         <!-- High-performance HikariCP connection pool integration for Hibernate -->
-            <dependency>
-                <groupId>org.hibernate.orm</groupId>
-                <artifactId>hibernate-hikaricp</artifactId>
-            </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-hikaricp</artifactId>
+        </dependency>
 
         <!-- Enterprise Logging Interfaces & Diagnostic Framework Facade -->
         <dependency>
