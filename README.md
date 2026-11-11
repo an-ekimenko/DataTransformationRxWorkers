@@ -8,14 +8,21 @@ The **DataTransformationRxWorkers** application is a high-performance, asynchron
 
 ## 🚀 Features
 
-* **RxJava 3 Reactive Architecture:** Driven by an asynchronous **RxJava 3** execution layer handling non-blocking interval loops and concurrent worker threads.
-* **Flexible Metadata-Driven Scheduling:** Worker execution windows are declared dynamically within `application.yaml` without recompilation.
-* **Crisis Bypassing Mode (`xn` parameter):** Overrides internal scheduling filters at startup to trigger immediate execution of all active pipelines.
-* **Pluggable Multi-Schema Authentication:** Unified security layer resolved dynamically from external configuration profiles supporting `none`, `basic`, `token`, and dynamic `oauth2` flows.
-* **Fault-Tolerant JSON Deserialization:** Features robust data-cleansing strategies powered by a centralized **`NumericParser`** utility inside the shared infrastructure. Incoming string tokens within `ACN_DataDeserializer` and `M12_DataDeserializer_v3` are dynamically sanitized by normalizing locale-specific number formats (replacing fractional commas with dots, truncating accidental floating points for integers) and defensively falling back to standard default values (`0` or `0.0`) on parsing exceptions to maximize integration uptime.
-* **Dependency Injection Architecture:** Powered by **Google Guice 7**, promoting loose coupling across network, serialization, and persistence layers.
-* **Dynamic Entity Integration & Mapping:** Decoupled shared-database design using a metadata index file (`entities.yaml`) and reflection-based domain model binding.
-* **Resilient Network Infrastructure:** Optimized **Apache HttpClient 5** backed by a thread-safe connection pool with a 700-second timeout ceiling.
+- **RxJava 3 Reactive Architecture:** High-performance asynchronous execution driven by an optimized `Schedulers.io()` pool. Leverages atomic execution guards (`AtomicBoolean.compareAndSet`) to guarantee rapid-fire protection, completely blocking concurrent thread overlapping or rapid ticks when the downstream database layers (MS SQL / Oracle) encounter exclusive transaction locks (`X-locks`). This architecture transforms the periodic push scheduler into a resilient, pull-isolated ingestion model that safeguards the external connection pool from exhaustion. Includes an advanced **Resilient Exponential Random Backoff Retry Policy** modeled after the *Resilience4j* specification. Upon intercepted downstream pipeline failures, subsequent retry intervals are dynamically calculated using an exponential progression combined with a randomization factor (Jitter) to prevent thundering herd problems on destination endpoints:
+  * `Current Interval = initial_interval * (multiplier)^(attempt - 1)`
+  * `Retry Delay = Current Interval ± (Current Interval * randomization_factor)`
+  
+  *Configuration Example:* Configured with an initial delay of `initial_timeout_ms`, a multiplier of `2.0`, and a `0.5` randomization factor (Jitter), the engine caps sequential intervals tightly below the maximum threshold while accumulating total spent time against the global `max_timeout_ms` budget.
+
+- **Flexible Metadata-Driven Scheduling:** Dynamic worker scheduling via `application.yaml` with second-level precision, supported by an autonomous time-budget supervisor to limit total lifecycle duration.
+- **Resilient Single-Shot Crisis Mode (xn parameter):** Overrides polling intervals during emergency runs by detaching pipelines from recurring loops and executing isolated single-fire tasks using `Schedulers.io().scheduleDirect()`, managed safely via a `CountDownLatch`.
+- **Pluggable Multi-Schema Authentication:** Supports `none`, `basic`, static `token`, and dynamic `oauth2` Client Credentials Grant workflows.
+- **Fault-Tolerant JSON Deserialization:** Sanitizes incoming string tokens (`ACN_DataDeserializer` and `M12_DataDeserializer_v3`) via a centralized **NumericParser** utility, normalizing numbers and falling back safely on parse errors.
+- **Dependency Injection Architecture:** Built on **Google Guice 7** for loose coupling, test isolation, and resource safety.
+- **Dynamic Entity Integration & Mapping:** Uses an external metadata matrix manifest (`entities.yaml`) with reflective classloading (`Class.forName`) to register active entities into Hibernate during the IoC container boot stage.
+- **High-Performance Connection Pooling (HikariCP):** Integrates `HikariCP` via `hibernate-hikaricp` to manage MS SQL Server connections, enforcing strict `connectionTimeout`, `queryTimeout`, and `leakDetectionThreshold` boundaries to prevent thread exhaustion during exclusive database locks (`X-locks`).
+- **Resilient Network Infrastructure:** Features an **Apache HttpClient 5** architecture with a thread-safe pooled connection manager and a 700-second request timeout ceiling.
+
 
 
 ## 🏗 Directory Layout
@@ -86,7 +93,7 @@ workers:
     start_time: ["12:55:00"]
     
     # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_attempts: 3
+    max_timeout_ms: 180000
     initial_timeout_ms: 10000
 
   # ============================================================================
@@ -125,8 +132,68 @@ workers:
     start_time: ["08:00:00", "20:00:00"]
     
     # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_attempts: 3
+    max_timeout_ms: 180000
     initial_timeout_ms: 10000
+```
+### 🗄 Database & HikariCP Pool Configuration (`Hibernate.cfg.xml`)
+
+Alongside `application.yaml`, the engine requires `config/Hibernate.cfg.xml` to configure the **MS SQL Server** staging layer, P6Spy SQL tracing, and the **HikariCP** connection pool boundaries. 
+
+Save this template as `config/Hibernate.cfg.xml` and update the connection URI and credentials:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<hibernate-configuration>
+    <session-factory>
+        <!-- =================================================================== -->
+        <!-- 1. Database Connection Settings via P6Spy Proxy Driver              -->
+        <!-- =================================================================== -->
+        <property name="hibernate.connection.driver_class">com.p6spy.engine.spy.P6SpyDriver</property>
+        <!-- Includes loginTimeout (30s) and queryTimeout (60s) to prevent infinite hangs on DB X-locks -->
+        <property name="hibernate.connection.url">jdbc:p6spy:sqlserver://YOUR_HOST:1433;databaseName=YOUR_DB_NAME</property>
+        <property name="hibernate.connection.username">YOUR_DB_USER</property>
+        <property name="hibernate.connection.password">YOUR_DB_PASSWORD</property>
+        <property name="hibernate.hikari.dataSource.encrypt">true</property>
+        <property name="hibernate.hikari.dataSource.trustServerCertificate">true</property>
+        <property name="hibernate.hikari.dataSource.loginTimeout">30</property>
+        <property name="hibernate.hikari.dataSource.queryTimeout">60</property>
+
+        <!-- =================================================================== -->
+        <!-- 2. Database Dialect & Thread Context Binding                        -->
+        <!-- =================================================================== -->
+        <property name="hibernate.dialect">org.hibernate.dialect.SQLServerDialect</property>
+        <property name="hibernate.current_session_context_class">thread</property>
+
+        <!-- =================================================================== -->
+        <!-- 3. Diagnostic & Raw Standard Output Logs Interception               -->
+        <!-- =================================================================== -->
+        <property name="show_sql">false</property>
+        <property name="hibernate.show_sql">false</property>
+        <property name="hibernate.format_sql">false</property>
+
+        <!-- =================================================================== -->
+        <!-- 4. High-Performance Transaction Batch Processing Optimization       -->
+        <!-- =================================================================== -->
+        <property name="hibernate.jdbc.batch_size">50</property>
+        <property name="hibernate.order_inserts">true</property>
+        <property name="hibernate.order_updates">true</property>
+
+        <!-- =================================================================== -->
+        <!-- 5. HikariCP High-Performance Connection Pool Settings               -->
+        <!-- =================================================================== -->
+        <property name="hibernate.connection.provider_class">org.hibernate.hikaricp.internal.HikariCPConnectionProvider</property>
+        <property name="hibernate.hikari.maximumPoolSize">10</property>
+        <property name="hibernate.hikari.minimumIdle">2</property>
+        <!-- Max wait time (ms) for a connection from the pool before throwing an exception -->
+        <property name="hibernate.hikari.connectionTimeout">30000</property>
+        <!-- Max lifetime (ms) of a connection in the pool (30 minutes) -->
+        <property name="hibernate.hikari.maxLifetime">1800000</property>
+        <!-- Max idle time (ms) before closing excess connections (10 minutes) -->
+        <property name="hibernate.hikari.idleTimeout">600000</property>
+        <!-- Logs a warning if a connection is held out of the pool longer than 45 seconds -->
+        <property name="hibernate.hikari.leakDetectionThreshold">45000</property>
+    </session-factory>
+</hibernate-configuration>
 ```
 
 ## 📂 Project Structure & Configuration
@@ -145,7 +212,7 @@ Acts as an isolated, reusable framework layer holding foundational utilities, da
 * **`config/ConfigPathResolver.java`**
   Dynamic cross-platform resource locator resolving absolute asset paths.
 * **`config/SharedInfraModule.java`**
-  Google Guice module that dynamically builds the single master MS SQL SessionFactory.
+  Google Guice module that dynamically builds the single master MS SQL `SessionFactory` backed by a **HikariCP** connection pool.
 * **`config/YAMLConfigLoader.java`**
   Fail-fast profile loader parsing structural parameters via Jackson YAMLFactory.
 * **`model/ExecutionResult.java`**
@@ -183,10 +250,10 @@ entities:
 
 During the foundational IoC container boot stage, the shared orchestration layer interceptor (`SharedInfraModule::provideMSSQLSessionFactory`) executes a pre-configuration handshake sequence:
 
-1. **Database Baseline Parsing:** It reads the native decoupled database connectivity properties out of the external `config/Hibernate.cfg.xml`.
+1. **Database & Pool Baseline Parsing:** Extracts database credentials, timeout parameters, and **HikariCP** settings (`maximumPoolSize`, `connectionTimeout`, `leakDetectionThreshold`) from `config/Hibernate.cfg.xml`.
 2. **Metadata Index Ingestion:** It loads the internal `entities.yaml` blueprint straight from the deployment assembly classpath stream using the Jackson YAML engine.
 3. **Reflection-Based Injection:** It loops through the extracted text entries, translates strings into runtime binary `Class<?>` signatures via reflective classloading (`Class.forName`), and dynamically appends them directly to the active Hibernate mapping registry.
-4. **Pool Sealing:** It registers the aggregated models context, initializes the thread-safe global `SessionFactory`, and binds it to the core generic transaction batching engine.
+4. **Pool Sealing:** Sets up the entity context, instantiates the thread-safe `SessionFactory` with the **HikariCP** provider, and binds it to the transaction execution engine.
 
 This design guarantees absolute layer isolation—the foundational `shared-module` package has **zero static imports** or awareness of granular downstream worker entities. Introducing an entirely new data transformation worker requires only appending its compiled persistent model to the `entities.yaml` layout matrix, minimizing complex code regressions.
 
