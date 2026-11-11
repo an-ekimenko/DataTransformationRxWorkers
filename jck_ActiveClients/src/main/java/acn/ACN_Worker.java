@@ -3,6 +3,7 @@ package acn;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,7 +13,7 @@ import by.beloil.shared.utils.ExecutionResultWriter;
 
 /**
  * Worker component acting as the boundary trigger for the Active Clients Number integration flow.
- * Manages atomic execution states to protect pipeline loops from overlapping concurrency spikes.
+ * Manages atomic execution states and handles resilient exponential random backoff retry policies with Jitter.
  */
 @Singleton
 public class ACN_Worker {
@@ -40,7 +41,7 @@ public class ACN_Worker {
 
     /**
      * Triggers the continuous processing loop of the Active Clients data transformation system.
-     * Natively handles retry loops and delays across multiple attempts until exhaustion or success.
+     * Evaluates execution limits against max_timeout_ms and applies Resilience4j-style Jitter parameters natively.
      */
     public void executeTask() {
         // Enforce immediate cancellation if another scheduler tick slips through concurrently
@@ -53,34 +54,41 @@ public class ACN_Worker {
         int returnedCode = 1;      // Default status flag representing exception faults
         int recordsProcessed = 0;  // Track number of committed records dynamically
 
-        // Extract runtime retry limits from the central application.yaml configurations
-        int maxAttempts = 3;
-        long retryDelaySeconds = 5; // Default safe fallback
+        // Extract runtime time-based budget limits from the central configurations
+        long maxTimeoutMs = 120000;       // Default 2 minutes fallback budget
+        long initialTimeoutMs = 10000;     // Default 10 seconds base delay
+        double multiplier = 2.0;          // Standard Resilience4j multiplier coefficient
+        double randomizationFactor = 0.5; // Jitter parameter to prevent thundering herd spikes
         
         ApiConfig.WorkerConfig acnConfig = globalConfig.getAcnWorker();
         if (acnConfig != null) {
-            if (acnConfig.getMaxAttempts() > 0) {
-                maxAttempts = acnConfig.getMaxAttempts();
+            if (acnConfig.getMaxTimeoutMs() > 0) {
+                maxTimeoutMs = acnConfig.getMaxTimeoutMs();
             }
-            // Fix: Using initialTimeoutMs from ApiConfig and converting milliseconds to seconds
             if (acnConfig.getInitialTimeoutMs() > 0) {
-                retryDelaySeconds = TimeUnit.MILLISECONDS.toSeconds(acnConfig.getInitialTimeoutMs());
-                // Fallback to 1 second if timeout config is lower than 1000ms to avoid 0-second infinite loop spin
-                if (retryDelaySeconds == 0) {
-                    retryDelaySeconds = 1;
-                }
+                initialTimeoutMs = acnConfig.getInitialTimeoutMs();
             }
         }
 
-        int currentAttempt = 0;
+        long startTimeMillis = System.currentTimeMillis();
+        int attempt = 0;
         boolean success = false;
 
         try {
-            // Loop until a successful pipeline integration occurs or retry attempts wear out completely
-            while (currentAttempt < maxAttempts && !success) {
-                currentAttempt++;
+            // Loop until a successful pipeline integration occurs or cumulative time limits wear out completely
+            while (!success) {
+                attempt++;
+                long timeElapsed = System.currentTimeMillis() - startTimeMillis;
+                
+                // Absolute deadline validation check before spawning a new execution attempt
+                if (timeElapsed >= maxTimeoutMs) {
+                    logger.error("ACN resilience budget exhausted. Total elapsed time {} ms exceeds max_timeout_ms {} ms. Aborting integration job.", timeElapsed, maxTimeoutMs);
+                    returnedCode = 1;
+                    break;
+                }
+
                 try {
-                    logger.info("Initiating ACN integration attempt {} of {}...", currentAttempt, maxAttempts);
+                    logger.info("Initiating ACN integration attempt {} (Time elapsed: {} ms / Budget: {} ms)...", attempt, timeElapsed, maxTimeoutMs);
                     
                     // Trigger the core processing engine pipeline
                     recordsProcessed = app.run();
@@ -89,17 +97,30 @@ public class ACN_Worker {
                     success = true;
                     logger.info("Active Clients worker loop finalized task assignment with exit code 0.");
                 } catch (Exception attemptException) {
-                    logger.error("ACN pipeline synchronization error on attempt {}/{} - Message: {}", 
-                            currentAttempt, maxAttempts, attemptException.getMessage());
+                    timeElapsed = System.currentTimeMillis() - startTimeMillis;
+                    logger.error("ACN pipeline synchronization error on attempt {} - Message: {}", attempt, attemptException.getMessage());
+
+                    // Resilience4j: Current Interval = initial_interval * (multiplier)^(attempt - 1)
+                    long currentInterval = (long) (initialTimeoutMs * Math.pow(multiplier, attempt - 1));
                     
-                    // If we have remaining available retries, stand by for the configured delay period
-                    if (currentAttempt < maxAttempts) {
-                        logger.info("Sleeping for {} seconds before starting the next task execution retry attempt...", retryDelaySeconds);
-                        TimeUnit.SECONDS.sleep(retryDelaySeconds);
+                    // Resilience4j Jitter calculation: Retry Delay = Current Interval ± (Current Interval * randomization_factor)
+                    long delta = (long) (currentInterval * randomizationFactor);
+                    long minDelay = currentInterval - delta;
+                    long maxDelay = currentInterval + delta;
+                    long nextDelayMs = ThreadLocalRandom.current().nextLong(minDelay, maxDelay + 1);
+                    
+                    // Cap the randomized delay so it doesn't sleep past the total remaining maxTimeout budget
+                    long remainingBudgetMs = maxTimeoutMs - timeElapsed;
+                    if (nextDelayMs > remainingBudgetMs) {
+                        nextDelayMs = remainingBudgetMs;
+                    }
+
+                    if (nextDelayMs > 0) {
+                        logger.info("Resilience4j backoff with Jitter: Standby for {} ms (Base interval: {} ms) before next ACN retry attempt...", nextDelayMs, currentInterval);
+                        TimeUnit.MILLISECONDS.sleep(nextDelayMs);
                     } else {
-                        // Mark final failure metrics as all recovery attempts are now officially exhausted
                         returnedCode = 1;
-                        logger.error("All scheduled ACN execution retries exhausted. Registering core operational breakdown.");
+                        break;
                     }
                 }
             }

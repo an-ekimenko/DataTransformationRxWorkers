@@ -4,6 +4,7 @@ target/
 # Log files and directories
 logs/
 *.log
+*.jar
 
 # Eclipse / Spring Tool Suite (STS) project files
 .project

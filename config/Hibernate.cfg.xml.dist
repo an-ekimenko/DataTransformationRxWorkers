@@ -5,32 +5,60 @@
 <!-- =================================================================== -->
 <hibernate-configuration>
     <session-factory>
-        <!-- Database Connection Settings via P6Spy Proxy Driver -->
+        <!-- =================================================================== -->
+        <!-- 1. Database Connection Settings via P6Spy Proxy Driver              -->
+        <!-- =================================================================== -->
         <property name="hibernate.connection.driver_class">com.p6spy.engine.spy.P6SpyDriver</property>
-        <property name="hibernate.connection.url">jdbc:p6spy:sqlserver://YOUR_TUNNEL_HOST:YOUR_PORT;databaseName=YOUR_DB_NAME;encrypt=true;trustServerCertificate=true;</property>
+        <!-- Added loginTimeout (30s) and queryTimeout (60s) to the URL for the MS SQL driver -->
+        property name="hibernate.connection.url">jdbc:p6spy:sqlserver://YOUR_HOST:1433;databaseName=YOUR_DB_NAME</property>
         <property name="hibernate.connection.username">YOUR_DB_USER</property>
         <property name="hibernate.connection.password">YOUR_DB_PASSWORD</property>
-
-        <!-- Database Dialect & Thread Context Binding -->
+        <property name="hibernate.hikari.dataSource.encrypt">true</property>
+        <property name="hibernate.hikari.dataSource.trustServerCertificate">true</property>
+        <property name="hibernate.hikari.dataSource.loginTimeout">30</property>
+        <property name="hibernate.hikari.dataSource.queryTimeout">60</property>
+        
+        <!-- =================================================================== -->
+        <!-- 2. Database Dialect & Thread Context Binding                        -->
+        <!-- =================================================================== -->
         <property name="hibernate.dialect">org.hibernate.dialect.SQLServerDialect</property>
         <property name="hibernate.current_session_context_class">thread</property>
 
-        <!-- Diagnostic & Raw Standard Output Logs Interception -->
+        <!-- =================================================================== -->
+        <!-- 3. Diagnostic & Raw Standard Output Logs Interception               -->
+        <!-- =================================================================== -->
         <property name="show_sql">false</property>
         <property name="hibernate.show_sql">false</property>
         <property name="hibernate.format_sql">false</property>
 
-        <!-- High-Performance Transaction Batch Processing Optimization -->
+        <!-- =================================================================== -->
+        <!-- 4. High-Performance Transaction Batch Processing Optimization       -->
+        <!-- =================================================================== -->
         <property name="hibernate.jdbc.batch_size">50</property>
         <property name="hibernate.order_inserts">true</property>
         <property name="hibernate.order_updates">true</property>
 
-        <!-- Enterprise Annotated Domain Entity Persistent Persistence Store -->
-        <!-- Module 1: Active Clients Volume Telemetry Tracking -->
-        <mapping class="acn.model.ACN_Entity"/>
-
-        <!-- Module 2: Financial Indicators Form-12 Balancing Pipeline -->
-        <mapping class="fi.model.F12_Entity"/>
-        <mapping class="fi.model.F12t_Entity"/>
+        <!-- =================================================================== -->
+        <!-- 5. HikariCP High-Performance Connection Pool Settings              -->
+        <!-- =================================================================== -->
+        <property name="hibernate.connection.provider_class">org.hibernate.hikaricp.internal.HikariCPConnectionProvider</property>
+        
+        <!-- Maximum number of active database connections (5-10 is sufficient for 2 workers) -->
+        <property name="hibernate.hikari.maximumPoolSize">10</property>
+        
+        <!-- Minimum number of idle connections maintained in the pool -->
+        <property name="hibernate.hikari.minimumIdle">2</property>
+        
+        <!-- Maximum time to wait for a connection from the pool (30 seconds in ms) -->
+        <property name="hibernate.hikari.connectionTimeout">30000</property>
+        
+        <!-- Maximum lifetime of a connection in the pool (30 minutes in ms) -->
+        <property name="hibernate.hikari.maxLifetime">1800000</property>
+        
+        <!-- Idle timeout before a connection is closed down to minimumIdle (10 minutes in ms) -->
+        <property name="hibernate.hikari.idleTimeout">600000</property>
+        
+        <!-- Leak detection: logs a WARN message if a connection is held out of the pool for more than 45 seconds -->
+        <property name="hibernate.hikari.leakDetectionThreshold">45000</property>
     </session-factory>
 </hibernate-configuration>

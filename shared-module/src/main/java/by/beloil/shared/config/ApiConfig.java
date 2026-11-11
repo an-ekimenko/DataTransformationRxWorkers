@@ -39,11 +39,13 @@ public class ApiConfig {
         @JsonProperty("start_time")
         private List<String> startTime;
 
-        @JsonProperty("max_attempts")
-        private int maxAttempts = 3;
+        // Max allowable cumulative time (in ms) for execution + all retries
+        @JsonProperty("max_timeout_ms")
+        private long maxTimeoutMs = 60000; // Default 1 minute fallback
 
+        // Base interval (in ms) for the first retry backoff calculation
         @JsonProperty("initial_timeout_ms")
-        private long initialTimeoutMs = 10000;
+        private long initialTimeoutMs = 1000; // Default 1 second
     }
 
     @Data

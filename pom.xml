@@ -34,10 +34,103 @@
         <oauth2.version>1.0.2</oauth2.version>
     </properties>
 
-        <dependencyManagement>
+    
+    <dependencyManagement>
         <dependencies>
-            <!-- Centralized Jackson Bill of Materials (BOM) Platform -->
-            <!-- Automatically coordinates internal version mismatches (e.g., 2.21.0 vs 2.21) -->
+
+            <!-- =================================================================== -->
+            <!-- 1. Internal Corporate Libraries & Cryptography                      -->
+            <!-- =================================================================== -->
+            <dependency>
+                <groupId>by.beloil.crypto</groupId>
+                <artifactId>crypto-cert-loader</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <!-- =================================================================== -->
+            <!-- 2. Core Architecture (Dependency Injection & Reactive Streams)      -->
+            <!-- =================================================================== -->
+            <!-- Lightweight dependency injection framework -->
+            <dependency>
+                <groupId>com.google.inject</groupId>
+                <artifactId>guice</artifactId>
+                <version>${guice.version}</version>
+            </dependency>
+
+            <!-- Reactive Extensions for the JVM -->
+            <dependency>
+                <groupId>io.reactivex.rxjava3</groupId>
+                <artifactId>rxjava</artifactId>
+                <version>${rxjava.version}</version>
+            </dependency>
+
+            <!-- =================================================================== -->
+            <!-- 3. Database Access: ORM, Connection Pooling & JDBC Drivers          -->
+            <!-- =================================================================== -->
+            <!-- Hibernate ORM Core -->
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+
+            <!-- High-performance HikariCP connection pool integration for Hibernate -->
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-hikaricp</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+
+            <!-- SQL query interceptor and logger (with parameter substitution) -->
+            <dependency>
+                <groupId>p6spy</groupId>
+                <artifactId>p6spy</artifactId>
+                <version>${p6spy.version}</version>
+            </dependency>
+
+            <!-- Microsoft SQL Server Native JDBC Driver -->
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>${mssql.version}</version>
+            </dependency>
+
+            <!-- Oracle Database JDBC Driver (JDK 11/17 compatible) -->
+            <dependency>
+                <groupId>com.oracle.database.jdbc</groupId>
+                <artifactId>ojdbc10</artifactId>
+                <version>${oracle.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
+            <!-- Oracle Internationalization and NLS support -->
+            <dependency>
+                <groupId>com.oracle.ojdbc</groupId>
+                <artifactId>orai18n</artifactId>
+                <version>${orai18n.version}</version>
+            </dependency>
+
+            <!-- =================================================================== -->
+            <!-- 4. Networking, HTTP Clients & Authorization                         -->
+            <!-- =================================================================== -->
+            <!-- Apache HttpClient 5 -->
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+
+            <!-- OAuth 2.0 Client library -->
+            <dependency>
+                <groupId>org.apache.oltu.oauth2</groupId>
+                <artifactId>org.apache.oltu.oauth2.client</artifactId>
+                <version>${oauth2.version}</version>
+            </dependency>
+
+            <!-- =================================================================== -->
+            <!-- 5. Serialization & Data Parsing (JSON/XML)                          -->
+            <!-- =================================================================== -->
+            <!-- Jackson BOM: Centrally coordinates versions across all Jackson modules -->
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
@@ -47,26 +140,9 @@
             </dependency>
 
             <!-- =================================================================== -->
-            <!-- Custom Corporate Cryptographic Dependencies                         -->
+            <!-- 6. Logging & Development Utilities                                  -->
             <!-- =================================================================== -->
-            <dependency>
-                <groupId>by.beloil.crypto</groupId>
-                <artifactId>crypto-cert-loader</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
-            </dependency>
-
-
-            <!-- Remaining Framework Locks (Guice, RxJava, Hibernate) stay here unchanged -->
-            <dependency>
-                <groupId>io.reactivex.rxjava3</groupId>
-                <artifactId>rxjava</artifactId>
-                <version>${rxjava.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.inject</groupId>
-                <artifactId>guice</artifactId>
-                <version>${guice.version}</version>
-            </dependency>
+            <!-- Log4j2 API and Core implementation -->
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-api</artifactId>
@@ -77,70 +153,24 @@
                 <artifactId>log4j-core</artifactId>
                 <version>${log4j.version}</version>
             </dependency>
-            <!-- Bridge: Routes SLF4J v2.x logs directly into Log4j2 -->
-			<dependency>
-    			<groupId>org.apache.logging.log4j</groupId>
-    			<artifactId>log4j-slf4j2-impl</artifactId>
-    			<version>${log4j.version}</version> 
-			</dependency>
+
+            <!-- Bridge: Routes SLF4J 2.x logs directly into Log4j2 -->
             <dependency>
-                <groupId>org.hibernate.orm</groupId>
-                <artifactId>hibernate-core</artifactId>
-                <version>${hibernate.version}</version>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j2-impl</artifactId>
+                <version>${log4j.version}</version>
             </dependency>
-            <!-- Dynamic Development Tool (Lombok) -->
+
+            <!-- Compile-time boilerplate code generator (getters, setters, builders) -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
             </dependency>
-            
-            <dependency>
-            	<groupId>org.apache.httpcomponents.client5</groupId>
-            	<artifactId>httpclient5</artifactId>
-            	<version>${httpclient.version}</version>
-        	</dependency>
-        	
-        	<dependency>
-	    		<groupId>org.apache.oltu.oauth2</groupId>
-	    		<artifactId>org.apache.oltu.oauth2.client</artifactId>
-    			<version>${oauth2.version}</version>
-			</dependency>
-        	
-			
-			<dependency>
-				<groupId>p6spy</groupId>
-				<artifactId>p6spy</artifactId>
-				<version>${p6spy.version}</version>
-			</dependency>
-
-            <!-- Microsoft SQL Server Native JDBC Driver mapping -->
-            <dependency>
-                <groupId>com.microsoft.sqlserver</groupId>
-                <artifactId>mssql-jdbc</artifactId>
-                <version>${mssql.version}</version>
-            </dependency>
-
-            <!-- Oracle JDBC Driver (JDK 11/17 compatible) -->
-    		<dependency>
-        		<groupId>com.oracle.database.jdbc</groupId>
-        		<artifactId>ojdbc10</artifactId>
-        		<version>${oracle.version}</version>
-        		<scope>compile</scope>
-    		</dependency>
-
-    		<!-- Oracle Internationalization and NLS support -->
-    		<dependency>
-        		<groupId>com.oracle.ojdbc</groupId>
-        		<artifactId>orai18n</artifactId>
-        		<version>${orai18n.version}</version>
-    		</dependency>
-
 
         </dependencies>
     </dependencyManagement>
-
 
     <build>
         <pluginManagement>
