@@ -8,7 +8,11 @@ workers:
   # ============================================================================
   # 1. Active Clients Number Worker (Module: jck_ActiveClients)
   # ============================================================================
-  acn_worker:
+  - name: "ACN_Worker"
+    # The alias which will be used when launching in immediate mode for a 
+    # specific worker, bypassing the schedule
+    alias: "acn"
+    
     # Target endpoint URI used to request the final business data
     data_endpoint: "https://your-corporate-gateway-domain/api/v1/active-clients"
 
@@ -49,7 +53,11 @@ workers:
     # ============================================================================
   # 2. Financial Indicators Worker (Module: FinancialIndicators)
   # ============================================================================
-  fi_worker:
+  - name: "FI_Worker"
+    # The alias which will be used when launching in immediate mode for a 
+    # specific worker, bypassing the schedule
+    alias: "fi"
+        
     # Target base API endpoint URL used to pull form-12 balance metrics payloads
     data_endpoint: "http://your-internal-api-domain:8088/api/forms/form-12"
 
@@ -85,3 +93,5 @@ workers:
     # Fault-tolerance retry boundary constraints based on backoff mathematical rules
     max_timeout_ms: 180000
     initial_timeout_ms: 10000
+   
+   

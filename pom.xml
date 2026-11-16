@@ -13,27 +13,26 @@
   	<module>FinancialIndicators</module>
   </modules>
   
-  <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <lib.dir>dependencies</lib.dir>
-        
-        <!-- Globalized single version locks -->
-        <rxjava.version>3.1.8</rxjava.version>
-        <jackson.version>2.21.0</jackson.version>
-        <guice.version>7.0.0</guice.version>
-        <log4j.version>2.20.0</log4j.version>
-        <hibernate.version>6.4.4.Final</hibernate.version>
-        <lombok.version>1.18.42</lombok.version>
-        <httpclient.version>5.2.1</httpclient.version>
-		<p6spy.version>3.9.1</p6spy.version>
-        <mssql.version>12.4.2.jre11</mssql.version>
-        <oracle.version>19.29.0.0</oracle.version>
-        <orai18n.version>19.3.0.0</orai18n.version>
-        <oauth2.version>1.0.2</oauth2.version>
-    </properties>
+    <properties>
+	    <java.version>17</java.version>
+	    <maven.compiler.release>${java.version}</maven.compiler.release>
+    	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    	<lib.dir>dependencies</lib.dir>
 
+    	<!-- Globalized single version locks -->
+    	<rxjava.version>3.1.8</rxjava.version>
+    	<jackson.version>2.21.0</jackson.version>
+    	<guice.version>7.0.0</guice.version>
+    	<log4j.version>2.20.0</log4j.version>
+    	<hibernate.version>6.4.4.Final</hibernate.version>
+    	<lombok.version>1.18.42</lombok.version>
+    	<httpclient.version>5.2.1</httpclient.version>
+    	<p6spy.version>3.9.1</p6spy.version>
+    	<mssql.version>12.4.2.jre11</mssql.version>
+    	<oracle.version>19.29.0.0</oracle.version>
+    	<orai18n.version>19.3.0.0</orai18n.version>
+    	<oauth2.version>1.0.2</oauth2.version>
+  	</properties>
     
     <dependencyManagement>
         <dependencies>
@@ -96,19 +95,19 @@
             </dependency>
 
             <!-- Oracle Database JDBC Driver (JDK 11/17 compatible) -->
-            <dependency>
-                <groupId>com.oracle.database.jdbc</groupId>
-                <artifactId>ojdbc10</artifactId>
-                <version>${oracle.version}</version>
-                <scope>compile</scope>
-            </dependency>
+        	<dependency>
+            	<groupId>com.oracle.database.jdbc</groupId>
+            	<artifactId>ojdbc10</artifactId>
+            	<version>${oracle.version}</version>
+        	</dependency>
 
-            <!-- Oracle Internationalization and NLS support -->
-            <dependency>
-                <groupId>com.oracle.ojdbc</groupId>
-                <artifactId>orai18n</artifactId>
-                <version>${orai18n.version}</version>
-            </dependency>
+	        <!-- Oracle Internationalization and NLS support -->
+    	    <dependency>
+        	    <groupId>com.oracle.ojdbc</groupId>
+            	<artifactId>orai18n</artifactId>
+            	<version>${orai18n.version}</version>
+        	</dependency>
+
 
             <!-- =================================================================== -->
             <!-- 4. Networking, HTTP Clients & Authorization                         -->
@@ -173,20 +172,27 @@
     </dependencyManagement>
 
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.13.0</version>
-                    <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
-                        <encoding>${project.build.sourceEncoding}</encoding>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.13.0</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+            <encoding>${project.build.sourceEncoding}</encoding>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
   
 </project>

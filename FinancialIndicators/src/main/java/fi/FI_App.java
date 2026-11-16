@@ -169,7 +169,8 @@ public class FI_App {
     }
 
     private List<F12_Entity> processSingleURL(int year, String month) throws Exception {
-        ApiConfig.WorkerConfig fiConfig = config.getFiWorker();
+        ApiConfig.WorkerConfig fiConfig = config.getWorkerByName("FI_Worker");
+
         if (fiConfig == null || fiConfig.getDataEndpoint() == null || fiConfig.getDataEndpoint().isBlank()) {
             throw new IllegalStateException("API data endpoint URI for Financial Indicators is missing in configuration files.");
         }

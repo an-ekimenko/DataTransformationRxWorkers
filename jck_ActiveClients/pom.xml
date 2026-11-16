@@ -88,17 +88,17 @@
         <scope>provided</scope>
     </dependency>
     
-    <!-- Oracle JDBC Driver (JDK 11/17 compatible) -->
+	<!-- Oracle Database JDBC Driver (JDK 11/17 compatible) -->
     <dependency>
-    	<groupId>com.oracle.database.jdbc</groupId>
-    	<artifactId>ojdbc10</artifactId>
+        <groupId>com.oracle.database.jdbc</groupId>
+        <artifactId>ojdbc10</artifactId>
     </dependency>
 
-	<!-- Oracle Internationalization and NLS support -->
-	<dependency>
-   		<groupId>com.oracle.ojdbc</groupId>
-   		<artifactId>orai18n</artifactId>
-	</dependency>
+    <!-- Oracle Internationalization and NLS support -->
+    <dependency>
+        <groupId>com.oracle.ojdbc</groupId>
+        <artifactId>orai18n</artifactId>
+    </dependency>
 
     
   </dependencies>

@@ -1,7 +1,9 @@
 package by.beloil.shared.config;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
@@ -9,21 +11,41 @@ import lombok.Data;
  * Unified application configuration profile for data transformation workers.
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ApiConfig {
 
     @JsonProperty("workers")
-    private Map<String, WorkerConfig> workers;
+    private List<WorkerConfig> workers = Collections.emptyList();
 
-    public WorkerConfig getAcnWorker() {
-        return workers != null ? workers.get("acn_worker") : null;
+    public WorkerConfig getWorkerByName(String name) {
+        if (workers == null || name == null) {
+            return null;
+        }
+        return workers.stream()
+                .filter(w -> name.equalsIgnoreCase(w.getName()))
+                .findFirst()
+                .orElse(null);
     }
 
-    public WorkerConfig getFiWorker() {
-        return workers != null ? workers.get("fi_worker") : null;
+    public WorkerConfig getWorkerByAlias(String alias) {
+        if (workers == null || alias == null) {
+            return null;
+        }
+        return workers.stream()
+                .filter(w -> alias.equalsIgnoreCase(w.getAlias()))
+                .findFirst()
+                .orElse(null);
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class WorkerConfig {
+    	@JsonProperty("name")
+        private String name;
+   	
+        @JsonProperty("alias")
+        private String alias;        // CLI alias for immediate single-worker execution (e.g., "acn", "fi")
+
         @JsonProperty("data_endpoint")
         private String dataEndpoint; // Target API endpoint for business metrics
 
@@ -49,6 +71,7 @@ public class ApiConfig {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class AuthConfig {
         @JsonProperty("basic")
         private BasicConfig basic;
@@ -61,12 +84,14 @@ public class ApiConfig {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class BasicConfig {
         private String username;
         private String password;
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Oauth2Config {
         @JsonProperty("token_endpoint")
         private String tokenEndpoint; // Auth server URI to request dynamic token

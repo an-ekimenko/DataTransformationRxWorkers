@@ -72,7 +72,8 @@ public class FI_HttpClient {
             }
         }
 
-        ApiConfig.WorkerConfig fiConfig = config.getFiWorker();
+        ApiConfig.WorkerConfig fiConfig = config.getWorkerByName("FI_Worker");
+
         
         // Create a timeout configuration.
         org.apache.hc.client5.http.config.RequestConfig requestConfig = org.apache.hc.client5.http.config.RequestConfig.custom()

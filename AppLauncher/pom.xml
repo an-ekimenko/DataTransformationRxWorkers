@@ -66,6 +66,19 @@
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
         </dependency>
+        
+        <!-- Oracle Database JDBC Driver (JDK 11/17 compatible) -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc10</artifactId>
+        </dependency>
+
+        <!-- Oracle Internationalization and NLS support -->
+        <dependency>
+            <groupId>com.oracle.ojdbc</groupId>
+            <artifactId>orai18n</artifactId>
+        </dependency>
+
 
         <!-- SQL query interceptor and logger -->
         <dependency>
@@ -86,6 +99,12 @@
             <artifactId>log4j-core</artifactId>
         </dependency>
 
+		<!-- Development Productivity Automatic Compile-Time Interceptor -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 

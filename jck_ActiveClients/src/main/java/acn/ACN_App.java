@@ -55,7 +55,7 @@ public class ACN_App {
 	public int run() {
 		logger.info("Initiating Active Clients telemetry integration data pipeline workflow...");
 		
-		ApiConfig.WorkerConfig workerConfig = config.getAcnWorker();
+		ApiConfig.WorkerConfig workerConfig = config.getWorkerByName("ACN_Worker");
 		if (workerConfig == null || workerConfig.getDataEndpoint() == null || workerConfig.getDataEndpoint().isBlank()) {
 			throw new IllegalStateException("API data endpoint URI target configuration is missing for ACN module.");
 		}

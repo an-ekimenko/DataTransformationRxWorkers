@@ -58,9 +58,10 @@ public class ACNAppModule extends AbstractModule {
 	@Provides 
 	@Singleton
 	public HttpClientBuilder provideHttpClientBuilder(ApiConfig config) {
-		long timeoutMs = (config.getAcnWorker() != null) ? config.getAcnWorker().getInitialTimeoutMs() : 10000;
-		if (timeoutMs < 700000) {
-			timeoutMs = 700000; // Safeguard threshold for heavy enterprise corporate gateways
+		long timeoutMs = (config.getWorkerByName("ACN_Worker")!= null) ? 
+									config.getWorkerByName("ACN_Worker").getInitialTimeoutMs() : 10000;
+		if (timeoutMs < 70000) {
+			timeoutMs = 70000; // Safeguard threshold for heavy enterprise corporate gateways
 		}
 		
 		logger.info("Configuring base Apache HTTP Client Builder with global execution timeouts: {} ms", timeoutMs);

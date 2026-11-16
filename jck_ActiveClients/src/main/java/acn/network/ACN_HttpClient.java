@@ -55,7 +55,8 @@ public class ACN_HttpClient {
         synchronized (this) {
             if (this.httpClient == null) {
                 if (dynamicTargetUrl.toLowerCase().startsWith("https")) {
-                    logger.info("HTTPS protocol scheme detected for ACN gateway channel. Triggering dynamic certificate handshake update hooks...");
+                    logger.info("HTTPS protocol scheme detected for ACN gateway channel. "
+                    		+ "Triggering dynamic certificate handshake update hooks...");
                     
                     CertUpdater.updateWithoutAuth(dynamicTargetUrl);
                     
@@ -74,7 +75,8 @@ public class ACN_HttpClient {
             }
         }
 
-        ApiConfig.WorkerConfig acnConfig = config.getAcnWorker();
+        ApiConfig.WorkerConfig acnConfig = config.getWorkerByName("ACN_Worker");
+
 
         // Create timeout configurations for the long-running ACN pipeline request
         org.apache.hc.client5.http.config.RequestConfig requestConfig = org.apache.hc.client5.http.config.RequestConfig.custom()
