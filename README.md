@@ -1,47 +1,50 @@
 # DataTransformationRxWorkers
 
-**Reactive, multi-module enterprise data integration engine powered by RxJava 3 and Google Guice, designed to extract, transform, and synchronize telemetry streams into MS SQL Server and Oracle environments.**
+**Reactive multi-module ETL engine built on RxJava 3 and Google Guice for extracting, transforming, and loading enterprise telemetry and financial indicators into MS SQL Server and Oracle.**
 
-## 📋 Description
+## Overview
 
-The **DataTransformationRxWorkers** application is a high-performance, asynchronous data integration engine built to orchestrate independent ETL worker pipelines (such as `ActiveClientsNumber` and `FinancialIndicators`). Powered by RxJava 3, it fetches raw telemetry JSON streams, applies transforms, and flushes persistent models to central staging environments acting as an intermediate data store (PSA) for SAP BW/4HANA.
+**DataTransformationRxWorkers** orchestrates independent asynchronous data pipelines (`ACN_Worker` and `FI_Worker`) that pull JSON telemetry and financial indicators from REST APIs, apply domain transformations, and persist staging datasets for SAP BW/4HANA ingestion.
 
-## 🚀 Features
+## Key Features & Resilience Architecture
 
-- **RxJava 3 Reactive Architecture:** High-performance asynchronous execution driven by an optimized `Schedulers.io()` pool. Leverages atomic execution guards (`AtomicBoolean.compareAndSet`) to guarantee rapid-fire protection, completely blocking concurrent thread overlapping or rapid ticks when the downstream database layers (MS SQL / Oracle) encounter exclusive transaction locks (`X-locks`). This architecture transforms the periodic push scheduler into a resilient, pull-isolated ingestion model that safeguards the external connection pool from exhaustion. Includes an advanced **Resilient Exponential Random Backoff Retry Policy** modeled after the *Resilience4j* specification. Upon intercepted downstream pipeline failures, subsequent retry intervals are dynamically calculated using an exponential progression combined with a randomization factor (Jitter) to prevent thundering herd problems on destination endpoints:
-  * `Current Interval = initial_interval * (multiplier)^(attempt - 1)`
-  * `Retry Delay = Current Interval ± (Current Interval * randomization_factor)`
-  
-  *Configuration Example:* Configured with an initial delay of `initial_timeout_ms`, a multiplier of `2.0`, and a `0.5` randomization factor (Jitter), the engine caps sequential intervals tightly below the maximum threshold while accumulating total spent time against the global `max_timeout_ms` budget.
+* **Centralized Resilient Worker Base (`AbstractResilientWorker`):**
+  All fault-tolerance, concurrency control, and execution reporting logic is encapsulated inside `by.beloil.shared.worker.AbstractResilientWorker`. Concrete workers (`ACN_Worker`, `FI_Worker`) only implement domain-specific ETL pipelines while inheriting standardized execution lifecycle management:
+  * **Monotonic Time Budgeting:** Uses `System.nanoTime()` instead of wall-clock time to track cumulative execution duration against `max_timeout_ms`, eliminating sensitivity to NTP clock adjustments.
+  * **Overflow-Safe Exponential Backoff with Jitter:** Dynamically calculates retry delays (`initial_timeout_ms * 2^(attempt - 1) ± 50%`) capped by the remaining time budget, aborting early instead of sleeping idle when remaining time is insufficient for another attempt.
 
-- **Flexible Metadata-Driven Scheduling:** Dynamic worker scheduling via `application.yaml` with second-level precision, supported by an autonomous time-budget supervisor to limit total lifecycle duration.
-- **Resilient Single-Shot Crisis Mode (xn parameter):** Overrides polling intervals during emergency runs by detaching pipelines from recurring loops and executing isolated single-fire tasks using `Schedulers.io().scheduleDirect()`, managed safely via a `CountDownLatch`.
-- **Pluggable Multi-Schema Authentication:** Supports `none`, `basic`, static `token`, and dynamic `oauth2` Client Credentials Grant workflows.
-- **Fault-Tolerant JSON Deserialization:** Sanitizes incoming string tokens (`ACN_DataDeserializer` and `M12_DataDeserializer_v3`) via a centralized **NumericParser** utility, normalizing numbers and falling back safely on parse errors.
-- **Dependency Injection Architecture:** Built on **Google Guice 7** for loose coupling, test isolation, and resource safety.
-- **Dynamic Entity Integration & Mapping:** Uses an external metadata matrix manifest (`entities.yaml`) with reflective classloading (`Class.forName`) to register active entities into Hibernate during the IoC container boot stage.
-- **High-Performance Connection Pooling (HikariCP):** Integrates `HikariCP` via `hibernate-hikaricp` to manage MS SQL Server connections, enforcing strict `connectionTimeout`, `queryTimeout`, and `leakDetectionThreshold` boundaries to prevent thread exhaustion during exclusive database locks (`X-locks`).
-- **Resilient Network Infrastructure:** Features an **Apache HttpClient 5** architecture with a thread-safe pooled connection manager and a 700-second request timeout ceiling.
+* **Jitter-Tolerant Scheduling (`2000 ms` Trigger Window):**
+  `RxSchedulerMain` evaluates cron-like schedules inside a `0..2000 ms` execution window paired with an in-memory slot registry (`lastExecutionMap`). This prevents missed runs caused by JVM Stop-The-World GC pauses or CPU scheduling jitter while guaranteeing at-most-once execution per scheduled slot.
 
+* **Two-Tier Backpressure & Overlap Protection:**
+  Prevents thread pool exhaustion and concurrent database lock contention (MS SQL X-locks) when downstream pipelines run longer than the 1-second polling tick:
+  * **Stream-Level Gate:** The RxJava `Observable.interval` loop filters out ticks while `worker.isRunning()` is `true`, leaving `lastExecutionMap` untouched until the active run completes.
+  * **Atomic Execution Lock:** `AbstractResilientWorker` enforces an `AtomicBoolean.compareAndSet(false, true)` guard inside a `try-finally` block to reject any overlapping invocations.
 
+* **Dynamic Metadata & Alias-Based Crisis Mode (`xn`):**
+  Workers are registered dynamically as a list in `config/application.yaml` by class name (`ACN_Worker`, `FI_Worker`) and mapped to CLI aliases (`acn`, `fi`). Passing `xn` bypasses schedules for immediate single-shot execution across all workers via `Schedulers.io().scheduleDirect()` and `CountDownLatch`, while `xn <alias>` isolates execution strictly to a single target worker.
 
-## 🏗 Directory Layout
+## Directory Layout
 
 ```text
-DataTransformationRxWorkers/
-├── dependencies/          # Shared runtime external libraries (*.jar)
-├── config/                # External configuration environment (YAML, XML)
-│   ├── application.yaml   # Flexible schedule rules and worker endpoints
-│   └── entities.yaml      # Dynamic persistence class index mapping
-├── exchange/              # Decentralized directory for analytical logs
-│   └── result.yaml        # Automated state receipt file
-├── logs/                  # Created automatically at runtime (commons.log, p6spy.log)
-├── AppLauncher/           # Central module bootstrapping the RxJava engine
-├── jck_ActiveClients/     # Business module isolating ACN telemetry logic
-├── FinancialIndicators/   # Business module isolating Form-12 Oracle and API workflows
-├── shared-module/         # Core infrastructure (repositories, loaders, path utilities)
-└── pom.xml                # Master Maven configuration managing modules hierarchy
+├── dependencies/                  # External third-party runtime JARs (sibling to project root)
+└── DataTransformationRxWorkers/
+    ├── config/                    # External runtime configuration files (YAML, XML)
+    │   ├── application.yaml       # Worker registry, aliases, schedules, and API endpoints
+    │   ├── entities.yaml          # Dynamic JPA entity class manifest
+    │   ├── Hibernate.cfg.xml      # MS SQL Server & HikariCP pool configuration
+    │   └── hibernate_f12.cfg.xml  # Oracle Database SessionFactory configuration
+    ├── exchange/                  # Inter-process status exchange directory
+    │   └── result.yaml            # Atomic execution receipt file for external orchestrators
+    ├── logs/                      # Auto-created runtime logs (commons.log, p6spy.log)
+    ├── AppLauncher/               # Entry point module (RxSchedulerMain & CLI LaunchOptions)
+    ├── shared-module/             # Core infrastructure (AbstractResilientWorker, ApiConfig, repositories)
+    ├── jck_ActiveClients/         # Active Clients Number ETL module (ACN_Worker, ACN_App)
+    ├── FinancialIndicators/       # Financial Indicators ETL module (FI_Worker, FI_App)
+    ├── pom.xml                    # Master Maven aggregator POM (JDK 17)
+    └── run_emergency.bat          # Helper script for immediate emergency execution (xn)
 ```
+
 ## ⚙ Configuration Template (`application.yaml.dist`)
 
 The application requires an external configuration file named `application.yaml` inside the `config/` directory. Below is the production-ready blueprint mapping all profile endpoints, reactive scheduler intervals, and pluggable security contexts. 
@@ -59,7 +62,12 @@ workers:
   # ============================================================================
   # 1. Active Clients Number Worker (Module: jck_ActiveClients)
   # ============================================================================
-  acn_worker:
+  - name: "ACN_Worker"
+
+    # The alias which will be used when launching in immediate mode for a 
+    # specific worker, bypassing the schedule
+    alias: "acn"
+
     # Target endpoint URI used to request the final business data
     data_endpoint: "https://your-corporate-gateway-domain/api/v1/active-clients"
 
@@ -99,7 +107,12 @@ workers:
   # ============================================================================
   # 2. Financial Indicators Worker (Module: FinancialIndicators)
   # ============================================================================
-  fi_worker:
+  - name: "FI_Worker"
+
+    # The alias which will be used when launching in immediate mode for a 
+    # specific worker, bypassing the schedule
+    alias: "fi"
+
     # Target base API endpoint URL used to pull form-12 balance metrics payloads
     data_endpoint: "http://your-internal-api-domain:8088/api/forms/form-12"
 
@@ -186,9 +199,9 @@ Save this template as `config/Hibernate.cfg.xml` and update the connection URI a
         <property name="hibernate.hikari.minimumIdle">2</property>
         <!-- Max wait time (ms) for a connection from the pool before throwing an exception -->
         <property name="hibernate.hikari.connectionTimeout">30000</property>
-        <!-- Max lifetime (ms) of a connection in the pool (30 minutes) -->
-        <property name="hibernate.hikari.maxLifetime">1800000</property>
-        <!-- Max idle time (ms) before closing excess connections (10 minutes) -->
+        <!-- Max lifetime (ms) of a connection in the pool -->
+        <property name="hibernate.hikari.maxLifetime">300000</property>
+        <!-- Max idle time (ms) before closing excess connections -->
         <property name="hibernate.hikari.idleTimeout">600000</property>
         <!-- Logs a warning if a connection is held out of the pool longer than 45 seconds -->
         <property name="hibernate.hikari.leakDetectionThreshold">45000</property>
@@ -207,8 +220,7 @@ The project follows a clean, highly decoupled multi-module architecture built on
 ### ⚙ 1. Shared Infrastructure Module (`shared-module`)
 Acts as an isolated, reusable framework layer holding foundational utilities, data-access interfaces, and dynamic configurations completely agnostic of specific business domains.
 
-* **`config/ApiConfig.java`**
-  Central unified YAML mapping tree matching application.yaml configurations.
+* **`config/ApiConfig.java`** Unified YAML configuration model mapping the list of worker profiles (`name`, `alias`, `schedules`, `endpoints`, and `retry budgets`).
 * **`config/ConfigPathResolver.java`**
   Dynamic cross-platform resource locator resolving absolute asset paths.
 * **`config/SharedInfraModule.java`**
@@ -223,6 +235,8 @@ Acts as an isolated, reusable framework layer holding foundational utilities, da
   Centralized, fault-tolerant numeric utility providing defensive parsing for primitive integers and doubles.
 * **`utils/ExecutionResultWriter.java`**
   Thread-safe atomic file writer that updates and merges metrics into result.yaml.
+* **`worker/AbstractResilientWorker.java`** Abstract base template encapsulating thread-safe `AtomicBoolean` execution guards, monotonic `System.nanoTime()` budget tracking, overflow-safe exponential backoff with jitter, and standardized result persistence.
+
 
 ### 📊 Metadata-Driven Entity Integration & Mapping
 
@@ -363,38 +377,37 @@ Since production credentials and connection profiles are strictly excluded from 
 * Initialize the target MS SQL staging credentials inside `config/Hibernate.cfg.xml`.
 * Initialize the dynamic persistence models list inside `config/entities.yaml`.
 
-### 2. Build the Application
 
-Execute the standard Maven phase from the workspace root directory to compile the multi-module project and extract isolated dependency nodes:
+## Deployment & Running
+
+### 1. Build the Application
+
+Execute the standard Maven build from the project root directory to compile all modules and copy external runtime JARs into the sibling `dependencies/` directory:
 
 ```bash
 mvn clean package
 ```
 
-This sequence triggers compilation under JDK 17 specs and aggregates all external runtime third-party library assets seamlessly.
+### 2. Run Modes
 
-### 3. Run the Application
+* **Standard Scheduled Mode:**
+  Starts the reactive engine and runs workers according to their `days` and `start_time` schedules in `config/application.yaml`:
+  ```bash
+  java -jar /path/to/AppLauncher.jar
+  ```
 
-#### A. Standard Automated Schedule Mode
-By default, executing the packaged container runner deploys background interval loops. The main process sleep barrier stays alive while background threads wake up according to the flexible cron rules configured in `application.yaml`:
+* **Emergency Immediate Mode — All Workers (`xn`):**
+  Bypasses schedules, runs all configured workers once in parallel, waits for all retry loops to complete via `CountDownLatch`, flushes logs, and exits:
+  ```bash
+  java -jar /path/to/AppLauncher.jar xn
+  ```
 
-```bash
-java -jar /path/to/AppLauncher.jar
-```
-
-#### B. Dynamic Log Directory Overriding
-You can dynamically override the absolute destination folder for all runtime traces (`commons.log` and `p6spy.log`) at startup by supplying the `-Dlog.dir` system property flag to the JVM configuration footprint:
-
-```bash
-java -Dlog.dir=/var/log/DataTransformationRxWorkers -jar /path/to/AppLauncher.jar
-```
-
-#### C. Immediate Emergency / Crisis Bypassing Mode
-To override the internal clock timers and force an immediate end-to-end synchronization run across all active workers (e.g., for ad-hoc manual execution, debugging, or external OS crontab triggers), supply the `xn` parameter as a program argument:
-
-```bash
-java -jar /path/to/AppLauncher.jar xn
-```
+* **Emergency Immediate Mode — Single Worker by Alias (`xn <alias>`):**
+  Instantiates and runs **only** the worker matching the specified `alias` from `config/application.yaml` (e.g., `acn` or `fi`), leaving all other workers uninitialized:
+  ```bash
+  java -jar /path/to/AppLauncher.jar xn acn
+  java -jar /path/to/AppLauncher.jar xn fi
+  ```
 
 *Note: You can seamlessly combine both flags to run an immediate ad-hoc sync while redirecting logs to a custom corporate mount point:*
 ```bash
