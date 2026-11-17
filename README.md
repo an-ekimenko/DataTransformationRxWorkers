@@ -24,6 +24,10 @@
 * **Dynamic Metadata & Alias-Based Crisis Mode (`xn`):**
   Workers are registered dynamically as a list in `config/application.yaml` by class name (`ACN_Worker`, `FI_Worker`) and mapped to CLI aliases (`acn`, `fi`). Passing `xn` bypasses schedules for immediate single-shot execution across all workers via `Schedulers.io().scheduleDirect()` and `CountDownLatch`, while `xn <alias>` isolates execution strictly to a single target worker.
 
+* **Shared Connection Pooling & Metadata-Driven Persistence (`SharedInfraModule`):**
+  `SharedInfraModule::provideMSSQLSessionFactory` initializes a centralized **HikariCP** connection pool and seals it inside a singleton Hibernate `SessionFactory` shared across all worker pipelines. Persistent JPA entity classes are resolved dynamically via reflection from the classpath manifest (`shared-module/src/main/resources/entities.yaml`), decoupling core infrastructure from concrete domain models.
+
+
 ## Directory Layout
 
 ```text
@@ -208,14 +212,9 @@ Save this template as `config/Hibernate.cfg.xml` and update the connection URI a
     </session-factory>
 </hibernate-configuration>
 ```
-
 ## 📂 Project Structure & Configuration
 
-The project follows a clean, highly decoupled multi-module architecture built on top of the **Domain-Driven Design (DDD)** approach. Below is the comprehensive structural breakdown and behavioral analysis of individual components:
-
-## 📂 Project Structure & Configuration
-
-The project follows a clean, highly decoupled multi-module architecture built on top of the **Domain-Driven Design (DDD)** approach. Below is the comprehensive structural breakdown:
+The project features a decoupled multi-module architecture based on **Domain-Driven Design (DDD)**.
 
 ### ⚙ 1. Shared Infrastructure Module (`shared-module`)
 Acts as an isolated, reusable framework layer holding foundational utilities, data-access interfaces, and dynamic configurations completely agnostic of specific business domains.
@@ -271,21 +270,11 @@ During the foundational IoC container boot stage, the shared orchestration layer
 
 This design guarantees absolute layer isolation—the foundational `shared-module` package has **zero static imports** or awareness of granular downstream worker entities. Introducing an entirely new data transformation worker requires only appending its compiled persistent model to the `entities.yaml` layout matrix, minimizing complex code regressions.
 
-### 🔄 2. Core Orchestration Module (`AppLauncher`)
-The definitive entry point and bootstrapper of the entire application suite. Manages logging contexts, schedules background workers, and signals execution status to external job monitors.
+### 🔄 2. Core Orchestration Module (AppLauncher)
 
-* **`rx/RxSchedulerMain.java`**
-  Orchestration core using RxJava 3 interval loops to fire tasks by schedule or via 'xn'.
+The primary entry point and bootstrapper managing logging contexts, background workers, and execution status signals.
 
-
-### 🔄 2. Core Orchestration Module (`AppLauncher`)
-
-The definitive entry point and bootstrapper of the entire application suite. Manages logging contexts, schedules background workers, and signals execution status to external job monitors.
-
-```text
-AppLauncher/src/main/java/rx/
-└── RxSchedulerMain.class           # Orchestration core using RxJava 3 interval loops to fire tasks by schedule or via 'xn'.
-```
+* **`rx/RxSchedulerMain.java`** — RxJava 3 interval loop engine used to execute scheduled tasks or trigger manual runs via `xn` / `xn <alias>`.
 
 ### 🌐 3. Active Clients Telemetry Module (`jck_ActiveClients`)
 Isolates all internal domain models, transport DTO layers, and network infrastructure required to fetch monthly aggregated active client statistics for corporate members via the secure REST API gateway.
@@ -378,40 +367,23 @@ Since production credentials and connection profiles are strictly excluded from 
 * Initialize the dynamic persistence models list inside `config/entities.yaml`.
 
 
-## Deployment & Running
+## 💻 Deployment & Running
 
-### 1. Build the Application
+### 1. Environment Configuration
+Initialize configuration files in `config/` (`application.yaml`, `Hibernate.cfg.xml`, `hibernate_f12.cfg.xml`).
 
-Execute the standard Maven build from the project root directory to compile all modules and copy external runtime JARs into the sibling `dependencies/` directory:
-
+### 2. Build
+Compile the project and bundle dependencies:
 ```bash
 mvn clean package
 ```
 
-### 2. Run Modes
-
-* **Standard Scheduled Mode:**
-  Starts the reactive engine and runs workers according to their `days` and `start_time` schedules in `config/application.yaml`:
-  ```bash
-  java -jar /path/to/AppLauncher.jar
-  ```
-
-* **Emergency Immediate Mode — All Workers (`xn`):**
-  Bypasses schedules, runs all configured workers once in parallel, waits for all retry loops to complete via `CountDownLatch`, flushes logs, and exits:
-  ```bash
-  java -jar /path/to/AppLauncher.jar xn
-  ```
-
-* **Emergency Immediate Mode — Single Worker by Alias (`xn <alias>`):**
-  Instantiates and runs **only** the worker matching the specified `alias` from `config/application.yaml` (e.g., `acn` or `fi`), leaving all other workers uninitialized:
-  ```bash
-  java -jar /path/to/AppLauncher.jar xn acn
-  java -jar /path/to/AppLauncher.jar xn fi
-  ```
+### 3. Execution Modes
+* **Standard Scheduled:** `java -jar /path/to/AppLauncher.jar`
+* **Emergency All Workers (`xn`):** `java -jar /path/to/AppLauncher.jar xn`
+* **Emergency Single Worker (`xn <alias>`):** `java -jar /path/to/AppLauncher.jar xn <alias>`
 
 *Note: You can seamlessly combine both flags to run an immediate ad-hoc sync while redirecting logs to a custom corporate mount point:*
 ```bash
 java -Dlog.dir=/var/log/DataTransformationRxWorkers -jar /path/to/AppLauncher.jar xn
 ```
-
-
