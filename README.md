@@ -354,22 +354,40 @@ workers:
     * `1` — Critical infrastructure or I/O bottleneck encountered; delivery aborted.
   * **`records_processed`**: The total count of database entity records successfully updated or merged into the target staging tables during the current batch cycle.
 
+## 🧪 Testing & Quality Assurance
+
+The project includes a comprehensive **JUnit 5** and **Mockito** unit test suite covering core resilience mechanics, CLI orchestration, configuration parsing, and domain ETL pipelines across all Maven modules:
+
+* **`shared-module` (`src/test/java/by/beloil/shared/`):**
+  * **`AbstractResilientWorkerTest`:** Verifies single-attempt success, exponential backoff retries with `ThreadLocalRandom` jitter bounds, overflow prevention on high attempt counts, early abort when calculated backoff exceeds remaining `max_timeout_ms` budget, thread-safe `AtomicBoolean` concurrency rejection, `InterruptedException` flag restoration, and guaranteed lock release even when result persistence fails.
+  * **`ApiConfigTest` & `YAMLConfigLoaderTest`:** Validates Jackson YAML deserialization of worker lists (`name`, `alias`, schedules, nested `oauth2`/`basic` auth blocks), default timeout fallbacks, case-insensitive worker/alias lookups, and fail-fast error wrapping on missing or malformed YAML files.
+  * **`ConfigPathResolverTest`:** Verifies cross-platform directory and file resolution across multi-module `target/` hierarchies, `user.dir` fallbacks, and parent-directory crawling using isolated `@TempDir` workspaces.
+  * **`ExecutionResultWriterTest`:** Verifies atomic creation of `exchange/result.yaml`, concurrent metric merging across multiple workers (`ACN_Worker`, `FI_Worker`), entry updates on re-runs, and automatic recovery from corrupted report files.
+
+* **`AppLauncher` (`src/test/java/rx/`):**
+  * **`RxSchedulerMainTest`:** Validates `LaunchOptions` CLI parsing (`xn`, `xn <alias>` in any order, validation errors on missing flags or conflicting aliases), `2000 ms` jitter-tolerant schedule window evaluation, `lastExecutionMap` duplicate-slot deduplication, ISO day-of-week filtering, and dynamic alias-based Guice worker resolution.
+
+* **`jck_ActiveClients` (`src/test/java/acn/`):**
+  * **`ACN_DataDeserializerTest`:** Tests streaming JSON parsing, defensive numeric fallback via `NumericParser`, skipping incomplete records missing `memberCode`, and empty payload handling.
+  * **`ACN_AppTest`:** Verifies previous-month date-range URL generation (`Europe/Minsk`), entity mapping (`ACN_PK` + `ACN_Entity`), batch persistence, empty-response short-circuiting, and exception propagation for retry handling.
+
+* **`FinancialIndicators` (`src/test/java/fi/`):**
+  * **`F12_DataDeserializer_v3Test`:** Validates on-the-fly KPI calculations (Revenue `001`, Profit `019`, Return on Sales `019/001`, Net Profit `028`), zero-revenue division-by-zero protection, multi-issuer state isolation, and malformed string handling.
+  * **`FI_AppTest`:** Verifies parallel `CompletableFuture` consolidation merging historical Oracle (`F12t_Entity`) and REST API (`F12_Entity`) streams, as well as graceful partial degradation when either upstream source fails.
+
+### Running the Test Suite
+
+Execute all unit tests across all modules from the project root:
+
+```bash
+mvn test
+```
+
   ## 🛠 Prerequisites
 
 * **Java:** JDK 17 (Minimum baseline requirement due to advanced pattern matching, arrow switch expressions, and Jakarta Persistence namespaces)
 * **Databases:** MS SQL Server (Staging layer) & Oracle Database (Source gateway)
 * **Build System:** Apache Maven 3.8+
-
-
-## 💻 Deployment & Running
-
-### 1. Prepare Environment Configurations
-
-Since production credentials and connection profiles are strictly excluded from the tracking index via `.gitignore`, initialize your local active templates from the templates directory:
-
-* Initialize the API targets and authorization nodes inside `config/application.yaml`.
-* Initialize the target MS SQL staging credentials inside `config/Hibernate.cfg.xml`.
-* Initialize the dynamic persistence models list inside `config/entities.yaml`.
 
 
 ## 💻 Deployment & Running
