@@ -11,7 +11,7 @@
 * **Centralized Resilient Worker Base (`AbstractResilientWorker`):**
   All fault-tolerance, concurrency control, and execution reporting logic is encapsulated inside `by.beloil.shared.worker.AbstractResilientWorker`. Concrete workers (`ACN_Worker`, `FI_Worker`) only implement domain-specific ETL pipelines while inheriting standardized execution lifecycle management:
   * **Monotonic Time Budgeting:** Uses `System.nanoTime()` instead of wall-clock time to track cumulative execution duration against `max_timeout_ms`, eliminating sensitivity to NTP clock adjustments.
-  * **Overflow-Safe Exponential Backoff with Jitter:** Dynamically calculates retry delays (`initial_timeout_ms * 2^(attempt - 1) ± 50%`) capped by the remaining time budget, aborting early instead of sleeping idle when remaining time is insufficient for another attempt.
+  * **Overflow-Safe Exponential Backoff with Jitter:** Dynamically calculates retry delays using uniform randomness via `ThreadLocalRandom.current().nextLong(minDelay, maxDelay + 1)` based on `RANDOMIZATION_FACTOR`, where the base interval `baseDelay = initial_timeout_ms * 2^(attempt - 1)` is bounded by `[baseDelay * (1 - RANDOMIZATION_FACTOR), baseDelay * (1 + RANDOMIZATION_FACTOR)]` and capped by the remaining `max_timeout_ms` budget, aborting early instead of sleeping idle when remaining time is insufficient for another attempt.
 
 * **Jitter-Tolerant Scheduling (`2000 ms` Trigger Window):**
   `RxSchedulerMain` evaluates cron-like schedules inside a `0..2000 ms` execution window paired with an in-memory slot registry (`lastExecutionMap`). This prevents missed runs caused by JVM Stop-The-World GC pauses or CPU scheduling jitter while guaranteeing at-most-once execution per scheduled slot.
@@ -104,10 +104,12 @@ workers:
     days:
     start_time: ["12:55:00"]
     
-    # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_timeout_ms: 180000
+    # Fault-tolerance retry boundary constraints based on exponential backoff rules:
+    # max_timeout_ms     - Total maximum time budget (in ms) allocated to this specific worker
+    #                      to fetch data from the API across the initial run and all retry attempts.
+    # initial_timeout_ms - Base delay interval (in ms) before the first retry attempt.
+    max_timeout_ms: 300000
     initial_timeout_ms: 10000
-
   # ============================================================================
   # 2. Financial Indicators Worker (Module: FinancialIndicators)
   # ============================================================================
@@ -148,8 +150,11 @@ workers:
     days:
     start_time: ["08:00:00", "20:00:00"]
     
-    # Fault-tolerance retry boundary constraints based on backoff mathematical rules
-    max_timeout_ms: 180000
+    # Fault-tolerance retry boundary constraints based on exponential backoff rules:
+    # max_timeout_ms     - Total maximum time budget (in ms) allocated to this specific worker
+    #                      to fetch data from the API across the initial run and all retry attempts.
+    # initial_timeout_ms - Base delay interval (in ms) before the first retry attempt.
+    max_timeout_ms: 300000
     initial_timeout_ms: 10000
 ```
 ### 🗄 Database & HikariCP Pool Configuration (`Hibernate.cfg.xml`)
